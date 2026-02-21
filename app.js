@@ -74,12 +74,39 @@ form.addEventListener('submit', async (e) => {
 
     const data = await response.json();
 
-    // Adjust the property names below to match your backend's JSON response
-    const text = data.result ?? data.pattern ?? data.message ?? JSON.stringify(data, null, 2);
-    setResponse(text);
+    const raw = data.raw_analysis ?? data.choices?.[0]?.message?.content ?? data.result ?? data.message;
+
+    if (!raw) {
+      setResponse('No analysis returned from the server.', 'error');
+      return;
+    }
+
+    // Extract only pattern names marked as present (✅) from the summary table
+    const patterns = [];
+    const tableRowRegex = /^\|([^|]+)\|[^|]*✅[^|]*\|/gm;
+    let match;
+    while ((match = tableRowRegex.exec(raw)) !== null) {
+      const name = match[1].trim();
+      if (name && !name.match(/^-+$/)) patterns.push(name);
+    }
+
+    if (patterns.length > 0) {
+      const html = `
+        <p style="font-size:0.8rem;color:#6b7280;margin-bottom:0.5rem;">Design pattern(s) detected:</p>
+        ${patterns.map(p => `<span class="pattern-badge">${p}</span>`).join('')}
+      `;
+      setResponse(html);
+    } else {
+      // Fallback: render full raw analysis as markdown
+      setResponse(renderMarkdown(raw));
+    }
 
   } catch (err) {
-    setResponse(`Error: ${err.message}`, 'error');
+    const isCors = err.message === 'Failed to fetch';
+    const msg = isCors
+      ? 'Failed to fetch — this is likely a CORS error.\n\nYour backend must include the header:\n  Access-Control-Allow-Origin: *\n\nSee the browser console (F12 → Console) for the exact error.'
+      : `Error: ${err.message}`;
+    setResponse(msg, 'error');
   } finally {
     submitBtn.disabled = false;
   }
@@ -89,4 +116,44 @@ form.addEventListener('submit', async (e) => {
 function setResponse(html, state = '') {
   responseBox.innerHTML = html;
   responseBox.className = state; // '', 'loading', or 'error'
+}
+
+// ── Minimal Markdown → HTML renderer ──────────────────────────────────────
+function renderMarkdown(text) {
+  return text
+    // Escape HTML entities first
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Headers
+    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Inline code
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    // Horizontal rule
+    .replace(/^---$/gm, '<hr>')
+    // Bullet list items
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    // Wrap consecutive <li> in <ul>
+    .replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`)
+    // Simple table rows (markdown pipe tables)
+    .replace(/^\|(.+)\|$/gm, (_, row) => {
+      const cells = row.split('|').map(c => `<td>${c.trim()}</td>`).join('');
+      return `<tr>${cells}</tr>`;
+    })
+    // Remove separator rows (|---|---|)
+    .replace(/<tr>(<td>[-: ]+<\/td>)+<\/tr>\n?/g, '')
+    // Wrap consecutive <tr> in <table>
+    .replace(/(<tr>.*<\/tr>\n?)+/g, (match) => `<table>${match}</table>`)
+    // Paragraphs: double newline → <p>
+    .replace(/\n{2,}/g, '</p><p>')
+    // Single newline → <br>
+    .replace(/\n/g, '<br>')
+    // Wrap everything in a paragraph
+    .replace(/^/, '<p>')
+    .replace(/$/, '</p>')
+    // Clean up empty paragraphs
+    .replace(/<p>\s*<\/p>/g, '');
 }
