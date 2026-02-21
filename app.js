@@ -63,7 +63,7 @@ form.addEventListener('submit', async (e) => {
   setResponse('Analyzing your project...', 'loading');
 
   try {
-    const response = await fetch('/api/analyze', {
+    const response = await fetch('http://localhost:8000/analyze', {
       method: 'POST',
       body: formData,
     });
