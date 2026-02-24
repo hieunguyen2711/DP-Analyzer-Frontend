@@ -4,6 +4,10 @@ document.querySelectorAll('.nav-link').forEach(link => {
     e.preventDefault();
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     link.classList.add('active');
+
+    const tab = link.dataset.tab;
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+    document.getElementById('tab-' + tab).classList.remove('hidden');
   });
 });
 
