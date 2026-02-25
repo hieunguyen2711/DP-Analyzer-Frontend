@@ -23,13 +23,35 @@
 
         <form id="generate-form">
           <div class="field-group">
-            <label class="field-label" for="generate-prompt">Prompt</label>
-            <textarea
-              id="generate-prompt"
-              class="prompt-textarea"
-              placeholder="e.g. I need a system that notifies multiple subscribers whenever a stock price changes..."
-              rows="6"
-            ></textarea>
+            <label class="field-label" for="pattern-select">Design Pattern</label>
+            <select id="pattern-select" class="pattern-select">
+              <option value="" disabled selected>Select a pattern...</option>
+              <optgroup label="Creational">
+                <option value="Abstract Factory">Abstract Factory</option>
+                <option value="Builder">Builder</option>
+                <option value="Factory Method">Factory Method</option>
+                <option value="Prototype">Prototype</option>
+                <option value="Singleton">Singleton</option>
+              </optgroup>
+              <optgroup label="Structural">
+                <option value="Adapter">Adapter</option>
+                <option value="Bridge">Bridge</option>
+                <option value="Composite">Composite</option>
+                <option value="Decorator">Decorator</option>
+                <option value="Facade">Facade</option>
+                <option value="Flyweight">Flyweight</option>
+                <option value="Proxy">Proxy</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="generate-context">Context</label>
+            <input
+              type="text"
+              id="generate-context"
+              class="context-input"
+              placeholder="e.g. An e-commerce order management system in Java"
+            />
           </div>
           <button type="submit" id="generate-btn">Generate</button>
         </form>
