@@ -16,7 +16,28 @@ const fileInput = document.getElementById('file-input');
 const dropZone = document.getElementById('drop-zone');
 const fileNameLabel = document.getElementById('file-name');
 const submitBtn = document.getElementById('submit-btn');
-const responseBox = document.getElementById('response-box');
+const chatMessages = document.getElementById('chat-messages');
+const chatPlaceholder = document.getElementById('chat-placeholder');
+const chatInput = document.getElementById('chat-input');
+const chatSendBtn = document.getElementById('chat-send-btn');
+const chatForm = document.getElementById('chat-form');
+
+// ── Chat helpers ───────────────────────────────────────────────────────────
+function appendBubble(html, role, state = '') {
+  if (chatPlaceholder) chatPlaceholder.remove();
+  const bubble = document.createElement('div');
+  bubble.className = `chat-bubble ${role}${state ? ' ' + state : ''}`;
+  bubble.innerHTML = html;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+
+function enableChat() {
+  chatInput.disabled = false;
+  chatSendBtn.disabled = false;
+  chatInput.focus();
+}
 
 // ── File selection via Browse ──────────────────────────────────────────────
 fileInput.addEventListener('change', () => {
@@ -48,7 +69,7 @@ function handleFile(file) {
   if (!file) return;
 
   if (!file.name.endsWith('.zip')) {
-    setResponse('Please select a valid .zip file.', 'error');
+    appendBubble('Please select a valid .zip file.', 'ai', 'error');
     fileNameLabel.textContent = 'No file selected';
     fileNameLabel.classList.remove('has-file');
     submitBtn.disabled = true;
@@ -58,11 +79,9 @@ function handleFile(file) {
   fileNameLabel.textContent = file.name;
   fileNameLabel.classList.add('has-file');
   submitBtn.disabled = false;
-  // Clear any previous response when a new file is chosen
-  setResponse('<span class="placeholder">Results will appear here after analysis.</span>');
 }
 
-// ── Form submit ────────────────────────────────────────────────────────────
+// ── Analyze form submit ────────────────────────────────────────────────────
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -73,7 +92,7 @@ form.addEventListener('submit', async (e) => {
   formData.append('file', file);
 
   submitBtn.disabled = true;
-  setResponse('Analyzing your project...', 'loading');
+  const loadingBubble = appendBubble('Analyzing your project…', 'ai', 'loading');
 
   try {
     const response = await fetch('http://localhost:8000/analyze', {
@@ -89,8 +108,10 @@ form.addEventListener('submit', async (e) => {
 
     const raw = data.raw_analysis ?? data.choices?.[0]?.message?.content ?? data.result ?? data.message;
 
+    loadingBubble.remove();
+
     if (!raw) {
-      setResponse('No analysis returned from the server.', 'error');
+      appendBubble('No analysis returned from the server.', 'ai', 'error');
       return;
     }
 
@@ -108,28 +129,60 @@ form.addEventListener('submit', async (e) => {
         <p style="font-size:0.8rem;color:#6b7280;margin-bottom:0.5rem;">Design pattern(s) detected:</p>
         ${patterns.map(p => `<span class="pattern-badge">${p}</span>`).join('')}
       `;
-      setResponse(html);
+      appendBubble(html, 'ai');
     } else {
-      // Fallback: render full raw analysis as markdown
-      setResponse(renderMarkdown(raw));
+      appendBubble(renderMarkdown(raw), 'ai');
     }
 
+    enableChat();
+
   } catch (err) {
+    loadingBubble.remove();
     const isCors = err.message === 'Failed to fetch';
     const msg = isCors
       ? 'Failed to fetch — this is likely a CORS error.\n\nYour backend must include the header:\n  Access-Control-Allow-Origin: *\n\nSee the browser console (F12 → Console) for the exact error.'
       : `Error: ${err.message}`;
-    setResponse(msg, 'error');
+    appendBubble(msg.replace(/\n/g, '<br>'), 'ai', 'error');
   } finally {
     submitBtn.disabled = false;
   }
 });
 
-// ── Helper ─────────────────────────────────────────────────────────────────
-function setResponse(html, state = '') {
-  responseBox.innerHTML = html;
-  responseBox.className = state; // '', 'loading', or 'error'
-}
+// ── Chat follow-up ─────────────────────────────────────────────────────────
+chatForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  appendBubble(text, 'user');
+  chatInput.value = '';
+  chatInput.disabled = true;
+  chatSendBtn.disabled = true;
+
+  const loadingBubble = appendBubble('Thinking…', 'ai', 'loading');
+
+  try {
+    const response = await fetch('http://localhost:8000/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text }),
+    });
+
+    if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
+
+    const data = await response.json();
+    const raw = data.reply ?? data.message ?? data.result ?? data.choices?.[0]?.message?.content;
+    loadingBubble.remove();
+    appendBubble(raw ? renderMarkdown(raw) : 'No response from server.', 'ai', raw ? '' : 'error');
+  } catch (err) {
+    loadingBubble.remove();
+    appendBubble(`Error: ${err.message}`, 'ai', 'error');
+  } finally {
+    chatInput.disabled = false;
+    chatSendBtn.disabled = false;
+    chatInput.focus();
+  }
+});
 
 // ── Minimal Markdown → HTML renderer ──────────────────────────────────────
 function renderMarkdown(text) {

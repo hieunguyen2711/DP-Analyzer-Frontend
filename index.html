@@ -86,11 +86,27 @@
           <button type="submit" id="submit-btn" disabled>Analyze</button>
         </form>
 
-        <div class="response-section">
-          <h2>Analysis Result</h2>
-          <div id="response-box">
-            <span class="placeholder">Results will appear here after analysis.</span>
+        <div class="chat-section">
+          <div class="chat-messages" id="chat-messages">
+            <span class="placeholder" id="chat-placeholder">Upload a .zip file to start the analysis. You can then ask follow-up questions here.</span>
           </div>
+          <form class="chat-input-bar" id="chat-form">
+            <input
+              type="text"
+              id="chat-input"
+              class="chat-input"
+              placeholder="Ask a follow-up question..."
+              disabled
+              autocomplete="off"
+            />
+            <button type="submit" id="chat-send-btn" disabled aria-label="Send">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </form>
         </div>
       </div>
 
