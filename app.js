@@ -112,11 +112,23 @@ generateForm.addEventListener('submit', async (e) => {
 
     const data = await response.json();
     console.log('[generate] response:', data);
-    const raw = data.code ?? data.result ?? data.message ?? data.reply ?? data.choices?.[0]?.message?.content;
 
-    generateResponseBox.innerHTML = raw
-      ? renderMarkdown(raw)
-      : '<span style="color:#dc2626;font-style:italic;">No response from server.</span>';
+    if (data.error) {
+      generateResponseBox.innerHTML = `<span style="color:#dc2626;">${data.error}</span>`;
+      return;
+    }
+
+    if (!data.files || data.files.length === 0) {
+      generateResponseBox.innerHTML = '<span style="color:#dc2626;font-style:italic;">No files returned from server.</span>';
+      return;
+    }
+
+    generateResponseBox.innerHTML = data.files.map(file => `
+      <div class="gen-file">
+        <div class="gen-file-header">${file.filename ?? file.name ?? 'File'}</div>
+        <pre class="gen-file-code"><code>${escapeHtml(file.content ?? file.code ?? '')}</code></pre>
+      </div>
+    `).join('');
   } catch (err) {
     const isCors = err.message === 'Failed to fetch';
     const msg = isCors
@@ -221,7 +233,7 @@ chatForm.addEventListener('submit', async (e) => {
 
     const data = await response.json();
     console.log('[followup] response:', data);
-    const raw = data.answer ?? data.reply ?? data.response ?? data.result ?? data.message ?? data.choices?.[0]?.message?.content;
+    const raw = data.choices?.[0]?.message?.content ?? data.answer ?? data.reply ?? data.response ?? data.result ?? data.message;
     loadingBubble.remove();
     appendBubble(raw ? renderMarkdown(raw) : 'No response from server.', 'ai', raw ? '' : 'error');
   } catch (err) {
@@ -235,6 +247,13 @@ chatForm.addEventListener('submit', async (e) => {
 });
 
 // ── Minimal Markdown → HTML renderer ──────────────────────────────────────
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function renderMarkdown(text) {
   return text
     // Escape HTML entities first

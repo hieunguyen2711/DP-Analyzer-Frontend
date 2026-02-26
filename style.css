@@ -441,7 +441,29 @@ h1 {
   font-weight: 600;
 }
 
-/* Pattern badges */
+/* --- Generated File Cards --- */
+.gen-file {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.gen-file:last-child { margin-bottom: 0; }
+
+.gen-file-header {
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  font-family: monospace;
+}
+
+.gen-file-code {\n  margin: 0;\n  padding: 1rem;\n  background: #1a1a2e;\n  overflow-x: auto;\n  font-size: 0.82rem;\n  line-height: 1.7;\n}\n\n.gen-file-code code {\n  font-family: \"Fira Code\", \"Cascadia Code\", Consolas, monospace;\n  color: #f8f8f2;\n  background: none;\n  padding: 0;\n  border-radius: 0;\n  font-size: inherit;\n  white-space: pre;\n}
+
+/* --- Pattern badges --- */
 .pattern-badge {
   display: inline-block;
   background: #ede9fe;
