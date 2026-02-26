@@ -18,6 +18,12 @@ const fileNameLabel = document.getElementById('file-name');
 const submitBtn = document.getElementById('submit-btn');
 const chatMessages = document.getElementById('chat-messages');
 const chatPlaceholder = document.getElementById('chat-placeholder');
+
+const generateForm = document.getElementById('generate-form');
+const patternSelect = document.getElementById('pattern-select');
+const generateContext = document.getElementById('generate-context');
+const generateBtn = document.getElementById('generate-btn');
+const generateResponseBox = document.getElementById('generate-response-box');
 const chatInput = document.getElementById('chat-input');
 const chatSendBtn = document.getElementById('chat-send-btn');
 const chatForm = document.getElementById('chat-form');
@@ -82,6 +88,45 @@ function handleFile(file) {
   fileNameLabel.classList.add('has-file');
   submitBtn.disabled = false;
 }
+
+// ── Generate form submit ───────────────────────────────────────────────────
+generateForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const pattern = patternSelect.value;
+  const description = generateContext.value.trim();
+
+  if (!pattern || !description) return;
+
+  generateBtn.disabled = true;
+  generateResponseBox.innerHTML = '<span style="color:#6366f1;font-style:italic;">Generating…</span>';
+
+  try {
+    const response = await fetch('http://localhost:8000/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pattern, description }),
+    });
+
+    if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
+
+    const data = await response.json();
+    console.log('[generate] response:', data);
+    const raw = data.code ?? data.result ?? data.message ?? data.reply ?? data.choices?.[0]?.message?.content;
+
+    generateResponseBox.innerHTML = raw
+      ? renderMarkdown(raw)
+      : '<span style="color:#dc2626;font-style:italic;">No response from server.</span>';
+  } catch (err) {
+    const isCors = err.message === 'Failed to fetch';
+    const msg = isCors
+      ? 'Failed to fetch — CORS error. Add Access-Control-Allow-Origin: * to your backend.'
+      : `Error: ${err.message}`;
+    generateResponseBox.innerHTML = `<span style="color:#dc2626;">${msg}</span>`;
+  } finally {
+    generateBtn.disabled = false;
+  }
+});
 
 // ── Analyze form submit ────────────────────────────────────────────────────
 form.addEventListener('submit', async (e) => {
