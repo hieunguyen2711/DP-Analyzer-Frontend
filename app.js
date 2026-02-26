@@ -22,6 +22,8 @@ const chatInput = document.getElementById('chat-input');
 const chatSendBtn = document.getElementById('chat-send-btn');
 const chatForm = document.getElementById('chat-form');
 
+let lastAnalysis = '';
+
 // ── Chat helpers ───────────────────────────────────────────────────────────
 function appendBubble(html, role, state = '') {
   if (chatPlaceholder) chatPlaceholder.remove();
@@ -115,6 +117,8 @@ form.addEventListener('submit', async (e) => {
       return;
     }
 
+    lastAnalysis = raw;
+
     // Extract only pattern names marked as present (✅) from the summary table
     const patterns = [];
     const tableRowRegex = /^\|([^|]+)\|[^|]*✅[^|]*\|/gm;
@@ -162,10 +166,10 @@ chatForm.addEventListener('submit', async (e) => {
   const loadingBubble = appendBubble('Thinking…', 'ai', 'loading');
 
   try {
-    const response = await fetch('http://localhost:8000/chat', {
+    const response = await fetch('http://localhost:8000/followup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
+      body: JSON.stringify({ analysis: lastAnalysis, question: text }),
     });
 
     if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
