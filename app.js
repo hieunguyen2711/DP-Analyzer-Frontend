@@ -175,7 +175,8 @@ chatForm.addEventListener('submit', async (e) => {
     if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
 
     const data = await response.json();
-    const raw = data.reply ?? data.message ?? data.result ?? data.choices?.[0]?.message?.content;
+    console.log('[followup] response:', data);
+    const raw = data.answer ?? data.reply ?? data.response ?? data.result ?? data.message ?? data.choices?.[0]?.message?.content;
     loadingBubble.remove();
     appendBubble(raw ? renderMarkdown(raw) : 'No response from server.', 'ai', raw ? '' : 'error');
   } catch (err) {
