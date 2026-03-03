@@ -377,7 +377,7 @@ h1 {
   font-size: 0.9rem;
   line-height: 1.65;
   color: #374151;
-  white-space: pre-wrap;
+  overflow-x: auto;
   overflow-y: auto;
   max-height: 320px;
 }
@@ -461,7 +461,24 @@ h1 {
   font-family: monospace;
 }
 
-.gen-file-code {\n  margin: 0;\n  padding: 1rem;\n  background: #1a1a2e;\n  overflow-x: auto;\n  font-size: 0.82rem;\n  line-height: 1.7;\n}\n\n.gen-file-code code {\n  font-family: \"Fira Code\", \"Cascadia Code\", Consolas, monospace;\n  color: #f8f8f2;\n  background: none;\n  padding: 0;\n  border-radius: 0;\n  font-size: inherit;\n  white-space: pre;\n}
+.gen-file-code {
+  margin: 0;
+  padding: 1rem;
+  background: #1a1a2e;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+#generate-response-box .gen-file-code code {
+  font-family: "Fira Code", "Cascadia Code", Consolas, monospace;
+  color: #f8f8f2;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  white-space: pre;
+}
 
 /* --- Pattern badges --- */
 .pattern-badge {
