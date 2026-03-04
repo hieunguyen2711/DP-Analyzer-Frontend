@@ -194,6 +194,7 @@ form.addEventListener('submit', async (e) => {
     } else {
       appendBubble(renderMarkdown(raw), 'ai');
     }
+    console.log("This is the raw data from the server: ",raw),
 
     enableChat();
 
