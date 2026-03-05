@@ -27,6 +27,8 @@ const generateResponseBox = document.getElementById('generate-response-box');
 const createFilesBtn = document.getElementById('create-files-btn');
 
 let lastGeneratedFiles = [];
+let lastPattern = '';
+let lastDescription = '';
 const chatInput = document.getElementById('chat-input');
 const chatSendBtn = document.getElementById('chat-send-btn');
 const chatForm = document.getElementById('chat-form');
@@ -143,6 +145,8 @@ generateForm.addEventListener('submit', async (e) => {
 
     createFilesBtn.hidden = false;
     lastGeneratedFiles = data.files;
+    lastPattern = pattern;
+    lastDescription = description;
 
     generateResponseBox.querySelectorAll('.gen-file-header').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -163,19 +167,43 @@ generateForm.addEventListener('submit', async (e) => {
 });
 
 // ── Create Java Files ──────────────────────────────────────────────────────
-createFilesBtn.addEventListener('click', () => {
+createFilesBtn.addEventListener('click', async () => {
   if (!lastGeneratedFiles.length) return;
-  lastGeneratedFiles.forEach(file => {
-    const name = file.filename ?? file.name ?? 'File.java';
-    const content = file.content ?? file.code ?? '';
-    const blob = new Blob([content], { type: 'text/x-java-source' });
+
+  createFilesBtn.disabled = true;
+  createFilesBtn.textContent = 'Packaging…';
+
+  try {
+    const response = await fetch('http://localhost:8000/package', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pattern: lastPattern,
+        description: lastDescription,
+        files: lastGeneratedFiles.map(f => ({
+          filename: f.filename ?? f.name ?? 'File.java',
+          content: f.content ?? f.code ?? '',
+        })),
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
+
+    const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = name;
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+    a.download = filenameMatch ? filenameMatch[1] : 'design-pattern.zip';
     a.click();
     URL.revokeObjectURL(url);
-  });
+  } catch (err) {
+    alert(`Failed to create files: ${err.message}`);
+  } finally {
+    createFilesBtn.disabled = false;
+    createFilesBtn.textContent = 'Create Java Files';
+  }
 });
 
 // ── Analyze form submit ────────────────────────────────────────────────────
