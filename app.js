@@ -24,6 +24,9 @@ const patternSelect = document.getElementById('pattern-select');
 const generateContext = document.getElementById('generate-context');
 const generateBtn = document.getElementById('generate-btn');
 const generateResponseBox = document.getElementById('generate-response-box');
+const createFilesBtn = document.getElementById('create-files-btn');
+
+let lastGeneratedFiles = [];
 const chatInput = document.getElementById('chat-input');
 const chatSendBtn = document.getElementById('chat-send-btn');
 const chatForm = document.getElementById('chat-form');
@@ -138,6 +141,9 @@ generateForm.addEventListener('submit', async (e) => {
       </div>
     `).join('');
 
+    createFilesBtn.hidden = false;
+    lastGeneratedFiles = data.files;
+
     generateResponseBox.querySelectorAll('.gen-file-header').forEach(btn => {
       btn.addEventListener('click', () => {
         const expanded = btn.getAttribute('aria-expanded') === 'true';
@@ -154,6 +160,22 @@ generateForm.addEventListener('submit', async (e) => {
   } finally {
     generateBtn.disabled = false;
   }
+});
+
+// ── Create Java Files ──────────────────────────────────────────────────────
+createFilesBtn.addEventListener('click', () => {
+  if (!lastGeneratedFiles.length) return;
+  lastGeneratedFiles.forEach(file => {
+    const name = file.filename ?? file.name ?? 'File.java';
+    const content = file.content ?? file.code ?? '';
+    const blob = new Blob([content], { type: 'text/x-java-source' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 });
 
 // ── Analyze form submit ────────────────────────────────────────────────────
