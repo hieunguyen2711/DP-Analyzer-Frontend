@@ -125,10 +125,26 @@ generateForm.addEventListener('submit', async (e) => {
 
     generateResponseBox.innerHTML = data.files.map(file => `
       <div class="gen-file">
-        <div class="gen-file-header">${file.filename ?? file.name ?? 'File'}</div>
-        <pre class="gen-file-code"><code>${escapeHtml(file.content ?? file.code ?? '')}</code></pre>
+        <button type="button" class="gen-file-header" aria-expanded="false">
+          <span>${file.filename ?? file.name ?? 'File'}</span>
+          <svg class="gen-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="gen-file-body" style="display:none;">
+          <pre class="gen-file-code"><code>${escapeHtml(file.content ?? file.code ?? '')}</code></pre>
+        </div>
       </div>
     `).join('');
+
+    generateResponseBox.querySelectorAll('.gen-file-header').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!expanded));
+        btn.nextElementSibling.style.display = expanded ? 'none' : 'block';
+      });
+    });
   } catch (err) {
     const isCors = err.message === 'Failed to fetch';
     const msg = isCors

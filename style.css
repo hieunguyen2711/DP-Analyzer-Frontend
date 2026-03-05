@@ -452,13 +452,42 @@ h1 {
 .gen-file:last-child { margin-bottom: 0; }
 
 .gen-file-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   background: #f3f4f6;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 0.45rem 0.9rem;
+  border: none;
+  border-bottom: 1px solid transparent;
+  padding: 0.55rem 0.9rem;
   font-size: 0.8rem;
   font-weight: 600;
   color: #374151;
   font-family: monospace;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.gen-file-header:hover {
+  background: #e9eaec;
+}
+
+.gen-file-header[aria-expanded="true"] {
+  border-bottom-color: #e5e7eb;
+}
+
+.gen-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.gen-file-header[aria-expanded="true"] .gen-chevron {
+  transform: rotate(180deg);
+}
+
+.gen-file-body {
+  display: none;
 }
 
 .gen-file-code {
