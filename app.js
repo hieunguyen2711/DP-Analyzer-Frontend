@@ -206,6 +206,75 @@ createFilesBtn.addEventListener('click', async () => {
   }
 });
 
+// ── Scoring Dashboard ──────────────────────────────────────────────────────
+const scoringForm       = document.getElementById('scoring-upload-form');
+const scoringFileInput  = document.getElementById('scoring-file-input');
+const scoringDropZone   = document.getElementById('scoring-drop-zone');
+const scoringFileName   = document.getElementById('scoring-file-name');
+const scoringSubmitBtn  = document.getElementById('scoring-submit-btn');
+const miScore           = document.getElementById('mi-score');
+const miBar             = document.getElementById('mi-bar');
+const pigsScore         = document.getElementById('piqs-score');
+const pigsBar           = document.getElementById('piqs-bar');
+const breakdownSection  = document.getElementById('breakdown-section');
+const breakdownTbody    = document.getElementById('breakdown-tbody');
+
+function handleScoringFile(file) {
+  if (!file) return;
+  if (!file.name.endsWith('.zip')) {
+    scoringFileName.textContent = 'Please select a .zip file';
+    scoringSubmitBtn.disabled = true;
+    return;
+  }
+  scoringFileName.textContent = file.name;
+  scoringFileName.classList.add('has-file');
+  scoringSubmitBtn.disabled = false;
+}
+
+scoringFileInput.addEventListener('change', () => handleScoringFile(scoringFileInput.files[0]));
+
+scoringDropZone.addEventListener('dragover', e => { e.preventDefault(); scoringDropZone.classList.add('dragover'); });
+scoringDropZone.addEventListener('dragleave', () => scoringDropZone.classList.remove('dragover'));
+scoringDropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  scoringDropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) { scoringFileInput.files = e.dataTransfer.files; handleScoringFile(file); }
+});
+scoringDropZone.addEventListener('click', () => scoringFileInput.click());
+
+function setMetric(scoreEl, barEl, value) {
+  scoreEl.textContent = value !== null ? value.toFixed(1) : '--';
+  barEl.style.width = value !== null ? `${Math.min(value, 100)}%` : '0%';
+
+  // Colour the bar based on score range
+  const pct = value ?? 0;
+  const isPiqs = barEl.classList.contains('piqs');
+  let colour;
+  if (isPiqs) {
+    colour = pct >= 80 ? '#22c55e' : pct >= 60 ? '#eab308' : pct >= 40 ? '#f97316' : '#ef4444';
+  } else {
+    colour = pct >= 75 ? '#22c55e' : pct >= 50 ? '#eab308' : pct >= 10 ? '#f97316' : '#ef4444';
+  }
+  barEl.style.background = colour;
+}
+
+function scorePillClass(score, isPiqs = false) {
+  if (isPiqs) return score >= 80 ? 'good' : score >= 60 ? 'moderate' : score >= 40 ? 'low' : 'poor';
+  return score >= 75 ? 'good' : score >= 50 ? 'moderate' : score >= 10 ? 'low' : 'poor';
+}
+
+scoringForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  // Endpoint not yet available — placeholder for future integration
+  scoringSubmitBtn.disabled = true;
+  scoringSubmitBtn.textContent = 'Coming soon…';
+  setTimeout(() => {
+    scoringSubmitBtn.disabled = false;
+    scoringSubmitBtn.textContent = 'Run Analysis';
+  }, 2000);
+});
+
 // ── Analyze form submit ────────────────────────────────────────────────────
 form.addEventListener('submit', async (e) => {
   e.preventDefault();

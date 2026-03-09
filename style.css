@@ -540,3 +540,196 @@ h1 {
   font-weight: 600;
   margin: 0.2rem 0.3rem 0.2rem 0;
 }
+
+/* --- Scoring Dashboard --- */
+#scoring-submit-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #6366f1;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+#scoring-submit-btn:hover:not(:disabled) { background: #4f46e5; }
+
+#scoring-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 580px) {
+  .metrics-grid { grid-template-columns: 1fr; }
+}
+
+.metric-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.metric-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metric-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.metric-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: #ede9fe;
+  color: #6366f1;
+  border: 1px solid #c4b5fd;
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+}
+
+.metric-badge.piqs {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #6ee7b7;
+}
+
+.metric-score-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.metric-score {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1;
+}
+
+.metric-max {
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.metric-bar-track {
+  width: 100%;
+  height: 8px;
+  background: #f3f4f6;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #6366f1;
+  transition: width 0.6s ease;
+}
+
+.metric-bar-fill.piqs {
+  background: #10b981;
+}
+
+.metric-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.metric-description {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* --- Per-file Breakdown --- */
+.breakdown-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.breakdown-section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.breakdown-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.breakdown-table th {
+  background: #f9fafb;
+  padding: 0.6rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.breakdown-table td {
+  padding: 0.6rem 1rem;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.breakdown-table tr:last-child td { border-bottom: none; }
+
+.breakdown-table tr:hover td { background: #f9fafb; }
+
+.score-pill {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.score-pill.good    { background: #dcfce7; color: #15803d; }
+.score-pill.moderate { background: #fef9c3; color: #854d0e; }
+.score-pill.low     { background: #ffedd5; color: #c2410c; }
+.score-pill.poor    { background: #fee2e2; color: #b91c1c; }
