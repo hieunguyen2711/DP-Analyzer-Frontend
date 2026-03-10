@@ -114,92 +114,109 @@
 
       <!-- Scoring Dashboard Tab -->
       <div id="tab-scoring" class="tab-panel hidden">
-        <h1>Scoring Dashboard</h1>
-        <p class="subtitle">Upload a <code>.zip</code> of your Java project to evaluate its code quality metrics.</p>
+        <div class="scoring-layout">
 
-        <form id="scoring-upload-form">
-          <div class="drop-zone" id="scoring-drop-zone">
-            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            <p>Drag &amp; drop your <strong>.zip</strong> file here, or</p>
-            <label class="file-label" for="scoring-file-input">Browse file</label>
-            <input type="file" id="scoring-file-input" accept=".zip" hidden />
-            <span id="scoring-file-name">No file selected</span>
-          </div>
-          <button type="submit" id="scoring-submit-btn" disabled>Run Analysis</button>
-        </form>
+          <!-- Main content -->
+          <div class="scoring-main">
+            <h1>Scoring Dashboard</h1>
+            <p class="subtitle">Upload a <code>.zip</code> of your Java project to evaluate its code quality metrics.</p>
 
-        <!-- Metrics Grid -->
-        <div class="metrics-grid" id="metrics-grid">
+            <form id="scoring-upload-form">
+              <div class="drop-zone" id="scoring-drop-zone">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <p>Drag &amp; drop your <strong>.zip</strong> file here, or</p>
+                <label class="file-label" for="scoring-file-input">Browse file</label>
+                <input type="file" id="scoring-file-input" accept=".zip" hidden />
+                <span id="scoring-file-name">No file selected</span>
+              </div>
+              <button type="submit" id="scoring-submit-btn" disabled>Run Analysis</button>
+            </form>
 
-          <!-- MI Card -->
-          <div class="metric-card" id="mi-card">
-            <div class="metric-card-header">
-              <span class="metric-title">Maintainability Index</span>
-              <span class="metric-badge" id="mi-badge">MI</span>
-            </div>
-            <div class="metric-score-row">
-              <span class="metric-score" id="mi-score">--</span>
-              <span class="metric-max">/&nbsp;100</span>
-            </div>
-            <div class="metric-bar-track">
-              <div class="metric-bar-fill" id="mi-bar" style="width:0%"></div>
-            </div>
-            <div class="metric-legend">
-              <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>0–9 Unmaintainable</span>
-              <span class="legend-item"><span class="legend-dot" style="background:#f97316"></span>10–49 Low</span>
-              <span class="legend-item"><span class="legend-dot" style="background:#eab308"></span>50–74 Moderate</span>
-              <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>75–100 Good</span>
-            </div>
-            <p class="metric-description" id="mi-description">Measures how maintainable the source code is based on Halstead volume, cyclomatic complexity, and lines of code.</p>
-          </div>
+            <!-- Metrics Grid -->
+            <div class="metrics-grid" id="metrics-grid">
 
-          <!-- PIQS Card -->
-          <div class="metric-card" id="piqs-card">
-            <div class="metric-card-header">
-              <span class="metric-title">Pattern Implementation Quality Score</span>
-              <span class="metric-badge piqs" id="piqs-badge">PIQS</span>
-            </div>
-            <div class="metric-score-row">
-              <span class="metric-score" id="piqs-score">--</span>
-              <span class="metric-max">/&nbsp;100</span>
-            </div>
-            <div class="metric-bar-track">
-              <div class="metric-bar-fill piqs" id="piqs-bar" style="width:0%"></div>
-            </div>
-            <div class="metric-legend">
-              <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>0–39 Poor</span>
-              <span class="legend-item"><span class="legend-dot" style="background:#f97316"></span>40–59 Fair</span>
-              <span class="legend-item"><span class="legend-dot" style="background:#eab308"></span>60–79 Good</span>
-              <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>80–100 Excellent</span>
-            </div>
-            <p class="metric-description" id="piqs-description">Evaluates how faithfully and correctly design patterns are implemented throughout the project.</p>
-          </div>
+              <!-- MI Card -->
+              <div class="metric-card" id="mi-card">
+                <div class="metric-card-header">
+                  <span class="metric-title">Maintainability Index</span>
+                  <span class="metric-badge" id="mi-badge">MI</span>
+                </div>
+                <div class="metric-score-row">
+                  <span class="metric-score" id="mi-score">--</span>
+                  <span class="metric-max">/&nbsp;100</span>
+                </div>
+                <div class="metric-bar-track">
+                  <div class="metric-bar-fill" id="mi-bar" style="width:0%"></div>
+                </div>
+                <div class="metric-legend">
+                  <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>0–9 Unmaintainable</span>
+                  <span class="legend-item"><span class="legend-dot" style="background:#f97316"></span>10–49 Low</span>
+                  <span class="legend-item"><span class="legend-dot" style="background:#eab308"></span>50–74 Moderate</span>
+                  <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>75–100 Good</span>
+                </div>
+                <p class="metric-description" id="mi-description">Measures how maintainable the source code is based on Halstead volume, cyclomatic complexity, and lines of code.</p>
+              </div>
 
-        </div>
+              <!-- PIQS Card -->
+              <div class="metric-card" id="piqs-card">
+                <div class="metric-card-header">
+                  <span class="metric-title">Pattern Implementation Quality Score</span>
+                  <span class="metric-badge piqs" id="piqs-badge">PIQS</span>
+                </div>
+                <div class="metric-score-row">
+                  <span class="metric-score" id="piqs-score">--</span>
+                  <span class="metric-max">/&nbsp;100</span>
+                </div>
+                <div class="metric-bar-track">
+                  <div class="metric-bar-fill piqs" id="piqs-bar" style="width:0%"></div>
+                </div>
+                <div class="metric-legend">
+                  <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>0–39 Poor</span>
+                  <span class="legend-item"><span class="legend-dot" style="background:#f97316"></span>40–59 Fair</span>
+                  <span class="legend-item"><span class="legend-dot" style="background:#eab308"></span>60–79 Good</span>
+                  <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>80–100 Excellent</span>
+                </div>
+                <p class="metric-description" id="piqs-description">Evaluates how faithfully and correctly design patterns are implemented throughout the project.</p>
+              </div>
 
-        <!-- Per-file breakdown -->
-        <div class="breakdown-section" id="breakdown-section" style="display:none">
-          <h2>Per-file Breakdown</h2>
-          <div class="breakdown-table-wrap">
-            <table class="breakdown-table" id="breakdown-table">
-              <thead>
-                <tr>
-                  <th>File</th>
-                  <th>MI Score</th>
-                  <th>PIQS Score</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="breakdown-tbody"></tbody>
-            </table>
-          </div>
-        </div>
+            </div>
 
+            <!-- Per-file breakdown -->
+            <div class="breakdown-section" id="breakdown-section" style="display:none">
+              <h2>Per-file Breakdown</h2>
+              <div class="breakdown-table-wrap">
+                <table class="breakdown-table" id="breakdown-table">
+                  <thead>
+                    <tr>
+                      <th>File</th>
+                      <th>MI Score</th>
+                      <th>PIQS Score</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="breakdown-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div><!-- /scoring-main -->
+
+          <!-- History Sidebar -->
+          <aside class="scoring-history-sidebar">
+            <div class="history-sidebar-header">
+              <span class="history-sidebar-title">History</span>
+              <button id="clear-history-btn" class="clear-history-btn" title="Clear all history">Clear</button>
+            </div>
+            <ul class="history-list" id="history-list">
+              <li class="history-empty">No uploads yet.</li>
+            </ul>
+          </aside>
+
+        </div><!-- /scoring-layout -->
       </div>
 
     </div>

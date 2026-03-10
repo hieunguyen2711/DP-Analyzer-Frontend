@@ -1,4 +1,6 @@
 // ── Navbar tab switching ───────────────────────────────────────────────────
+const mainContainer = document.querySelector('.container');
+
 document.querySelectorAll('.nav-link').forEach(link => {
   link.addEventListener('click', e => {
     e.preventDefault();
@@ -8,6 +10,13 @@ document.querySelectorAll('.nav-link').forEach(link => {
     const tab = link.dataset.tab;
     document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
     document.getElementById('tab-' + tab).classList.remove('hidden');
+
+    // Widen container for the Scoring Dashboard so the sidebar fits
+    if (tab === 'scoring') {
+      mainContainer.classList.add('scoring-wide');
+    } else {
+      mainContainer.classList.remove('scoring-wide');
+    }
   });
 });
 
@@ -266,14 +275,152 @@ function scorePillClass(score, isPiqs = false) {
 
 scoringForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  // Endpoint not yet available — placeholder for future integration
+
+  const file = scoringFileInput.files[0];
+  if (!file) return;
+
   scoringSubmitBtn.disabled = true;
-  scoringSubmitBtn.textContent = 'Coming soon…';
-  setTimeout(() => {
+  scoringSubmitBtn.textContent = 'Analyzing…';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('http://localhost:8000/score', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
+
+    const data = await response.json();
+
+    const miVal   = data.mi   ?? null;
+    const piqsVal = data.piqs ?? null;
+
+    setMetric(miScore,   miBar,   miVal);
+    setMetric(pigsScore, pigsBar, piqsVal);
+
+    // Per-file breakdown
+    let breakdownRows = [];
+    if (data.breakdown && data.breakdown.length > 0) {
+      breakdownRows = data.breakdown.map(row => ({
+        file:      row.file,
+        mi:        row.mi_score  ?? '--',
+        piqs:      row.piqs_score ?? '--',
+        miClass:   scorePillClass(row.mi_score  ?? 0, false),
+        piqsClass: scorePillClass(row.piqs_score ?? 0, true),
+        status:    row.status ?? '',
+      }));
+      breakdownTbody.innerHTML = breakdownRows.map(row => `
+        <tr>
+          <td>${row.file}</td>
+          <td><span class="score-pill ${row.miClass}">${typeof row.mi === 'number' ? row.mi.toFixed(1) : row.mi}</span></td>
+          <td><span class="score-pill ${row.piqsClass}">${typeof row.piqs === 'number' ? row.piqs.toFixed(1) : row.piqs}</span></td>
+          <td>${row.status}</td>
+        </tr>
+      `).join('');
+      breakdownSection.style.display = '';
+    }
+
+    // Save to history
+    saveScoringHistory({
+      id:        Date.now(),
+      fileName:  file.name,
+      date:      new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      mi:        miVal,
+      piqs:      piqsVal,
+      breakdown: breakdownRows,
+    });
+
+  } catch (err) {
+    // Endpoint not yet available — show friendly message
+    const isNotFound = err.message.includes('404') || err.message === 'Failed to fetch';
+    scoringSubmitBtn.textContent = isNotFound ? 'Coming soon…' : `Error: ${err.message}`;
+    setTimeout(() => { scoringSubmitBtn.textContent = 'Run Analysis'; }, 2500);
+  } finally {
     scoringSubmitBtn.disabled = false;
-    scoringSubmitBtn.textContent = 'Run Analysis';
-  }, 2000);
+    if (scoringSubmitBtn.textContent === 'Analyzing…') scoringSubmitBtn.textContent = 'Run Analysis';
+  }
 });
+
+// ── Scoring History ────────────────────────────────────────────────────────
+const SCORING_HISTORY_KEY = 'dp_scoring_history';
+
+function getScoringHistory() {
+  try { return JSON.parse(localStorage.getItem(SCORING_HISTORY_KEY) ?? '[]'); }
+  catch { return []; }
+}
+
+function saveScoringHistory(entry) {
+  const history = getScoringHistory();
+  history.unshift(entry);
+  if (history.length > 50) history.length = 50;
+  localStorage.setItem(SCORING_HISTORY_KEY, JSON.stringify(history));
+  renderScoringHistory();
+}
+
+function renderScoringHistory() {
+  const list = document.getElementById('history-list');
+  const history = getScoringHistory();
+
+  if (history.length === 0) {
+    list.innerHTML = '<li class="history-empty">No uploads yet.</li>';
+    return;
+  }
+
+  list.innerHTML = history.map((entry, i) => `
+    <li class="history-item" data-index="${i}">
+      <span class="history-item-name" title="${escapeHtml(entry.fileName)}">${escapeHtml(entry.fileName)}</span>
+      <span class="history-item-date">${entry.date}</span>
+      <div class="history-item-scores">
+        <span class="history-score-pill mi">MI ${entry.mi !== null && entry.mi !== undefined ? Number(entry.mi).toFixed(1) : '--'}</span>
+        <span class="history-score-pill piqs">PIQS ${entry.piqs !== null && entry.piqs !== undefined ? Number(entry.piqs).toFixed(1) : '--'}</span>
+      </div>
+    </li>
+  `).join('');
+
+  list.querySelectorAll('.history-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const idx = parseInt(item.dataset.index, 10);
+      loadHistoryEntry(getScoringHistory()[idx]);
+      list.querySelectorAll('.history-item').forEach(i => i.classList.remove('selected'));
+      item.classList.add('selected');
+    });
+  });
+}
+
+function loadHistoryEntry(entry) {
+  setMetric(miScore,   miBar,   entry.mi   ?? null);
+  setMetric(pigsScore, pigsBar, entry.piqs ?? null);
+
+  scoringFileName.textContent = entry.fileName;
+  scoringFileName.classList.add('has-file');
+
+  if (entry.breakdown && entry.breakdown.length > 0) {
+    breakdownTbody.innerHTML = entry.breakdown.map(row => `
+      <tr>
+        <td>${escapeHtml(row.file)}</td>
+        <td><span class="score-pill ${row.miClass}">${typeof row.mi === 'number' ? row.mi.toFixed(1) : row.mi}</span></td>
+        <td><span class="score-pill ${row.piqsClass}">${typeof row.piqs === 'number' ? row.piqs.toFixed(1) : row.piqs}</span></td>
+        <td>${row.status}</td>
+      </tr>
+    `).join('');
+    breakdownSection.style.display = '';
+  } else {
+    breakdownSection.style.display = 'none';
+  }
+}
+
+document.getElementById('clear-history-btn').addEventListener('click', () => {
+  if (confirm('Clear all upload history?')) {
+    localStorage.removeItem(SCORING_HISTORY_KEY);
+    renderScoringHistory();
+  }
+});
+
+// Populate history list on first load
+renderScoringHistory();
 
 // ── Analyze form submit ────────────────────────────────────────────────────
 form.addEventListener('submit', async (e) => {
