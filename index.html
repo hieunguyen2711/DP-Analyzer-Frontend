@@ -137,6 +137,26 @@
               <button type="submit" id="scoring-submit-btn" disabled>Run Analysis</button>
             </form>
 
+            <!-- Summary Stats (hidden until first result) -->
+            <div class="summary-stats" id="summary-stats" style="display:none">
+              <div class="stat-chip">
+                <span class="stat-value" id="stat-files">--</span>
+                <span class="stat-label">Files</span>
+              </div>
+              <div class="stat-chip">
+                <span class="stat-value" id="stat-classes">--</span>
+                <span class="stat-label">Classes</span>
+              </div>
+              <div class="stat-chip">
+                <span class="stat-value" id="stat-methods">--</span>
+                <span class="stat-label">Methods</span>
+              </div>
+              <div class="stat-chip stat-chip-pattern">
+                <span class="stat-value" id="stat-pattern">--</span>
+                <span class="stat-label">Pattern</span>
+              </div>
+            </div>
+
             <!-- Metrics Grid -->
             <div class="metrics-grid" id="metrics-grid">
 
@@ -148,10 +168,32 @@
                 </div>
                 <div class="metric-score-row">
                   <span class="metric-score" id="mi-score">--</span>
-                  <span class="metric-max">/&nbsp;100</span>
+                  <span class="metric-max">/&nbsp;100 avg</span>
                 </div>
                 <div class="metric-bar-track">
                   <div class="metric-bar-fill" id="mi-bar" style="width:0%"></div>
+                </div>
+                <div class="mi-range-row" id="mi-range-row" style="display:none">
+                  <span class="mi-range-item">
+                    <span class="mi-range-label">Min</span>
+                    <span class="mi-range-val" id="mi-min">--</span>
+                  </span>
+                  <span class="mi-range-sep">·</span>
+                  <span class="mi-range-item">
+                    <span class="mi-range-label">Max</span>
+                    <span class="mi-range-val" id="mi-max">--</span>
+                  </span>
+                </div>
+                <div class="mi-dist" id="mi-dist" style="display:none">
+                  <span class="mi-dist-item mi-dist-green">
+                    <span class="mi-dist-count" id="mi-dc-green">0</span>&nbsp;Good
+                  </span>
+                  <span class="mi-dist-item mi-dist-yellow">
+                    <span class="mi-dist-count" id="mi-dc-yellow">0</span>&nbsp;Moderate
+                  </span>
+                  <span class="mi-dist-item mi-dist-red">
+                    <span class="mi-dist-count" id="mi-dc-red">0</span>&nbsp;Low
+                  </span>
                 </div>
                 <div class="metric-legend">
                   <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>0–9 Unmaintainable</span>
@@ -159,43 +201,86 @@
                   <span class="legend-item"><span class="legend-dot" style="background:#eab308"></span>50–74 Moderate</span>
                   <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>75–100 Good</span>
                 </div>
-                <p class="metric-description" id="mi-description">Measures how maintainable the source code is based on Halstead volume, cyclomatic complexity, and lines of code.</p>
+                <p class="metric-description">Measures how maintainable the source code is based on Halstead volume, cyclomatic complexity, and lines of code.</p>
               </div>
 
-              <!-- PIQS Card -->
-              <div class="metric-card" id="piqs-card">
+              <!-- CK Card (hidden until CK data is available) -->
+              <div class="metric-card" id="ck-card" style="display:none">
                 <div class="metric-card-header">
-                  <span class="metric-title">Pattern Implementation Quality Score</span>
-                  <span class="metric-badge piqs" id="piqs-badge">PIQS</span>
+                  <span class="metric-title">CK Quality Score</span>
+                  <span class="metric-badge ck">CK</span>
                 </div>
                 <div class="metric-score-row">
-                  <span class="metric-score" id="piqs-score">--</span>
+                  <span class="metric-score" id="ck-score">--</span>
                   <span class="metric-max">/&nbsp;100</span>
                 </div>
                 <div class="metric-bar-track">
-                  <div class="metric-bar-fill piqs" id="piqs-bar" style="width:0%"></div>
+                  <div class="metric-bar-fill ck" id="ck-bar" style="width:0%"></div>
                 </div>
-                <div class="metric-legend">
-                  <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>0–39 Poor</span>
-                  <span class="legend-item"><span class="legend-dot" style="background:#f97316"></span>40–59 Fair</span>
-                  <span class="legend-item"><span class="legend-dot" style="background:#eab308"></span>60–79 Good</span>
-                  <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>80–100 Excellent</span>
+                <div class="ck-mini-grid">
+                  <div class="ck-mini-item">
+                    <span class="ck-mini-label">WMC</span>
+                    <span class="ck-mini-val" id="ck-wmc">--</span>
+                  </div>
+                  <div class="ck-mini-item">
+                    <span class="ck-mini-label">CBO</span>
+                    <span class="ck-mini-val" id="ck-cbo">--</span>
+                  </div>
+                  <div class="ck-mini-item">
+                    <span class="ck-mini-label">RFC</span>
+                    <span class="ck-mini-val" id="ck-rfc">--</span>
+                  </div>
+                  <div class="ck-mini-item">
+                    <span class="ck-mini-label">DIT</span>
+                    <span class="ck-mini-val" id="ck-dit">--</span>
+                  </div>
+                  <div class="ck-mini-item">
+                    <span class="ck-mini-label">LCOM*</span>
+                    <span class="ck-mini-val" id="ck-lcom">--</span>
+                  </div>
+                  <div class="ck-mini-item">
+                    <span class="ck-mini-label">TCC</span>
+                    <span class="ck-mini-val" id="ck-tcc">--</span>
+                  </div>
                 </div>
-                <p class="metric-description" id="piqs-description">Evaluates how faithfully and correctly design patterns are implemented throughout the project.</p>
+                <p class="metric-description">Chidamber &amp; Kemerer OO metrics — coupling, complexity, and cohesion across all analysed classes.</p>
               </div>
 
+            </div><!-- /metrics-grid -->
+
+            <!-- Halstead Section (hidden until results) -->
+            <div class="halstead-section" id="halstead-section" style="display:none">
+              <h2>Halstead Metrics</h2>
+              <div class="halstead-grid">
+                <div class="halstead-card">
+                  <span class="halstead-val" id="h-volume">--</span>
+                  <span class="halstead-label">Avg Volume</span>
+                </div>
+                <div class="halstead-card">
+                  <span class="halstead-val" id="h-difficulty">--</span>
+                  <span class="halstead-label">Avg Difficulty</span>
+                </div>
+                <div class="halstead-card halstead-card-warn">
+                  <span class="halstead-val" id="h-bugs">--</span>
+                  <span class="halstead-label">Est. Bugs</span>
+                </div>
+                <div class="halstead-card">
+                  <span class="halstead-val" id="h-sloc">--</span>
+                  <span class="halstead-label">Avg SLOC</span>
+                </div>
+              </div>
             </div>
 
-            <!-- Per-file breakdown -->
+            <!-- Per-class Breakdown (hidden until results) -->
             <div class="breakdown-section" id="breakdown-section" style="display:none">
-              <h2>Per-file Breakdown</h2>
+              <h2>Per-class Breakdown</h2>
               <div class="breakdown-table-wrap">
                 <table class="breakdown-table" id="breakdown-table">
-                  <thead>
+                  <thead id="breakdown-thead">
                     <tr>
+                      <th>Class</th>
                       <th>File</th>
                       <th>MI Score</th>
-                      <th>PIQS Score</th>
                       <th>Status</th>
                     </tr>
                   </thead>

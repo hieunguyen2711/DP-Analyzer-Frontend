@@ -734,6 +734,213 @@ h1 {
 .score-pill.low     { background: #ffedd5; color: #c2410c; }
 .score-pill.poor    { background: #fee2e2; color: #b91c1c; }
 
+/* --- Summary Stats Row --- */
+.summary-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.stat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.55rem 1rem;
+  min-width: 72px;
+  flex: 1;
+}
+
+.stat-chip-pattern {
+  background: #ede9fe;
+  border-color: #c4b5fd;
+  flex: 2;
+}
+
+.stat-chip-pattern .stat-value {
+  color: #6366f1;
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* --- MI Min/Max Range Row --- */
+.mi-range-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: -0.15rem;
+}
+
+.mi-range-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.mi-range-label {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mi-range-val {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.mi-range-sep {
+  color: #d1d5db;
+  font-size: 1rem;
+}
+
+/* --- MI Distribution Pills --- */
+.mi-dist {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.mi-dist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+}
+
+.mi-dist-count {
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.mi-dist-green  { background: #dcfce7; color: #15803d; }
+.mi-dist-yellow { background: #fef9c3; color: #854d0e; }
+.mi-dist-red    { background: #fee2e2; color: #b91c1c; }
+
+/* --- CK Card Badge & Bar --- */
+.metric-badge.ck {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #93c5fd;
+}
+
+.metric-bar-fill.ck {
+  background: #3b82f6;
+}
+
+/* --- CK Mini Metrics Grid --- */
+.ck-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.1rem;
+}
+
+.ck-mini-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8faff;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 0.4rem 0.3rem;
+  gap: 0.1rem;
+}
+
+.ck-mini-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ck-mini-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+/* --- Halstead Section --- */
+.halstead-section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.6rem;
+}
+
+.halstead-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 580px) {
+  .halstead-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.halstead-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.8rem 0.5rem;
+}
+
+.halstead-card-warn {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.halstead-card-warn .halstead-val {
+  color: #c2410c;
+}
+
+.halstead-val {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1.1;
+}
+
+.halstead-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
 /* --- Scoring Layout (main + sidebar) --- */
 .container.scoring-wide {
   max-width: 880px;
@@ -876,9 +1083,9 @@ h1 {
   color: #6366f1;
 }
 
-.history-score-pill.piqs {
-  background: #ecfdf5;
-  color: #059669;
+.history-score-pill.ck {
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 @media (max-width: 700px) {

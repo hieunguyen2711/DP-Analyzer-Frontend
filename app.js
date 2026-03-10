@@ -223,10 +223,14 @@ const scoringFileName   = document.getElementById('scoring-file-name');
 const scoringSubmitBtn  = document.getElementById('scoring-submit-btn');
 const miScore           = document.getElementById('mi-score');
 const miBar             = document.getElementById('mi-bar');
-const pigsScore         = document.getElementById('piqs-score');
-const pigsBar           = document.getElementById('piqs-bar');
+const ckScoreEl         = document.getElementById('ck-score');
+const ckBar             = document.getElementById('ck-bar');
+const ckCard            = document.getElementById('ck-card');
+const summaryStatsEl    = document.getElementById('summary-stats');
+const halsteadSection   = document.getElementById('halstead-section');
 const breakdownSection  = document.getElementById('breakdown-section');
 const breakdownTbody    = document.getElementById('breakdown-tbody');
+const breakdownThead    = document.getElementById('breakdown-thead');
 
 function handleScoringFile(file) {
   if (!file) return;
@@ -253,14 +257,13 @@ scoringDropZone.addEventListener('drop', e => {
 scoringDropZone.addEventListener('click', () => scoringFileInput.click());
 
 function setMetric(scoreEl, barEl, value) {
-  scoreEl.textContent = value !== null ? value.toFixed(1) : '--';
-  barEl.style.width = value !== null ? `${Math.min(value, 100)}%` : '0%';
+  scoreEl.textContent = value !== null && value !== undefined ? value.toFixed(1) : '--';
+  barEl.style.width   = value !== null && value !== undefined ? `${Math.min(value, 100)}%` : '0%';
 
-  // Colour the bar based on score range
-  const pct = value ?? 0;
-  const isPiqs = barEl.classList.contains('piqs');
+  const pct  = value ?? 0;
+  const isCK = barEl.classList.contains('ck');
   let colour;
-  if (isPiqs) {
+  if (isCK) {
     colour = pct >= 80 ? '#22c55e' : pct >= 60 ? '#eab308' : pct >= 40 ? '#f97316' : '#ef4444';
   } else {
     colour = pct >= 75 ? '#22c55e' : pct >= 50 ? '#eab308' : pct >= 10 ? '#f97316' : '#ef4444';
@@ -268,9 +271,89 @@ function setMetric(scoreEl, barEl, value) {
   barEl.style.background = colour;
 }
 
-function scorePillClass(score, isPiqs = false) {
-  if (isPiqs) return score >= 80 ? 'good' : score >= 60 ? 'moderate' : score >= 40 ? 'low' : 'poor';
+function scorePillClass(score) {
   return score >= 75 ? 'good' : score >= 50 ? 'moderate' : score >= 10 ? 'low' : 'poor';
+}
+
+function miStatusHtml(mi) {
+  if (mi === null || mi === undefined) return '—';
+  if (mi >= 75) return '<span style="color:#15803d;font-weight:600">Good</span>';
+  if (mi >= 50) return '<span style="color:#854d0e;font-weight:600">Moderate</span>';
+  if (mi >= 10) return '<span style="color:#c2410c;font-weight:600">Low</span>';
+  return '<span style="color:#b91c1c;font-weight:600">Unmaintainable</span>';
+}
+
+function renderScoreResult(data) {
+  const s = data.summary;
+
+  // Summary stats
+  document.getElementById('stat-files').textContent   = s.total_files   ?? '--';
+  document.getElementById('stat-classes').textContent = s.total_classes ?? '--';
+  document.getElementById('stat-methods').textContent = s.total_methods ?? '--';
+  document.getElementById('stat-pattern').textContent = s.pattern_name  || '—';
+  summaryStatsEl.style.display = '';
+
+  // Maintainability Index
+  setMetric(miScore, miBar, s.avg_mi_score ?? null);
+  const miRangeRow = document.getElementById('mi-range-row');
+  const miDistEl   = document.getElementById('mi-dist');
+  if (s.min_mi_score !== undefined && s.max_mi_score !== undefined) {
+    document.getElementById('mi-min').textContent = s.min_mi_score.toFixed(1);
+    document.getElementById('mi-max').textContent = s.max_mi_score.toFixed(1);
+    miRangeRow.style.display = '';
+  }
+  if (s.mi_distribution) {
+    document.getElementById('mi-dc-green').textContent  = s.mi_distribution.green  ?? 0;
+    document.getElementById('mi-dc-yellow').textContent = s.mi_distribution.yellow ?? 0;
+    document.getElementById('mi-dc-red').textContent    = s.mi_distribution.red    ?? 0;
+    miDistEl.style.display = '';
+  }
+
+  // CK Quality Score
+  if (s.ck_overall_score != null) {
+    setMetric(ckScoreEl, ckBar, s.ck_overall_score);
+    document.getElementById('ck-wmc').textContent  = s.avg_wmc       != null ? s.avg_wmc.toFixed(1)       : '—';
+    document.getElementById('ck-cbo').textContent  = s.avg_cbo       != null ? s.avg_cbo.toFixed(1)       : '—';
+    document.getElementById('ck-rfc').textContent  = s.avg_rfc       != null ? s.avg_rfc.toFixed(1)       : '—';
+    document.getElementById('ck-dit').textContent  = s.avg_dit       != null ? s.avg_dit.toFixed(1)       : '—';
+    document.getElementById('ck-lcom').textContent = s.avg_lcom_star != null ? s.avg_lcom_star.toFixed(2) : '—';
+    document.getElementById('ck-tcc').textContent  = s.avg_tcc       != null ? s.avg_tcc.toFixed(2)       : '—';
+    ckCard.style.display = '';
+  } else {
+    ckCard.style.display = 'none';
+  }
+
+  // Halstead
+  document.getElementById('h-volume').textContent     = s.avg_halstead_volume     != null ? s.avg_halstead_volume.toFixed(1)     : '--';
+  document.getElementById('h-difficulty').textContent = s.avg_halstead_difficulty != null ? s.avg_halstead_difficulty.toFixed(2) : '--';
+  document.getElementById('h-bugs').textContent       = s.total_estimated_bugs    != null ? s.total_estimated_bugs.toFixed(3)    : '--';
+  document.getElementById('h-sloc').textContent       = s.avg_sloc               != null ? s.avg_sloc.toFixed(1)               : '--';
+  halsteadSection.style.display = '';
+
+  // Per-class Breakdown
+  const hasCK = Array.isArray(data.methods) && data.methods.length > 0;
+  breakdownThead.innerHTML = `<tr>
+    <th>Class</th><th>File</th><th>MI Score</th>
+    ${hasCK ? '<th>WMC</th><th>CBO</th><th>RFC</th>' : ''}
+    <th>Status</th>
+  </tr>`;
+  if (Array.isArray(data.classes) && data.classes.length > 0) {
+    breakdownTbody.innerHTML = data.classes.map(cls => {
+      const mi      = cls.mi_score ?? null;
+      const pillCls = mi !== null ? scorePillClass(mi) : 'poor';
+      const ckCols  = hasCK
+        ? `<td>${cls.wmc ?? '—'}</td><td>${cls.cbo ?? '—'}</td><td>${cls.rfc ?? '—'}</td>`
+        : '';
+      return `<tr>
+        <td style="font-weight:600">${escapeHtml(cls.class_name ?? cls.name ?? '—')}</td>
+        <td style="color:#9ca3af;font-size:0.8rem">${escapeHtml(cls.file_name ?? cls.file ?? '—')}</td>
+        <td><span class="score-pill ${pillCls}">${mi !== null ? mi.toFixed(1) : '—'}</span></td>
+        ${ckCols}
+        <td>${cls.status ?? miStatusHtml(mi)}</td>
+      </tr>`;
+    }).join('');
+    breakdownSection.style.display = '';
+  }
 }
 
 scoringForm.addEventListener('submit', async (e) => {
@@ -295,42 +378,17 @@ scoringForm.addEventListener('submit', async (e) => {
 
     const data = await response.json();
 
-    const miVal   = data.mi   ?? null;
-    const piqsVal = data.piqs ?? null;
-
-    setMetric(miScore,   miBar,   miVal);
-    setMetric(pigsScore, pigsBar, piqsVal);
-
-    // Per-file breakdown
-    let breakdownRows = [];
-    if (data.breakdown && data.breakdown.length > 0) {
-      breakdownRows = data.breakdown.map(row => ({
-        file:      row.file,
-        mi:        row.mi_score  ?? '--',
-        piqs:      row.piqs_score ?? '--',
-        miClass:   scorePillClass(row.mi_score  ?? 0, false),
-        piqsClass: scorePillClass(row.piqs_score ?? 0, true),
-        status:    row.status ?? '',
-      }));
-      breakdownTbody.innerHTML = breakdownRows.map(row => `
-        <tr>
-          <td>${row.file}</td>
-          <td><span class="score-pill ${row.miClass}">${typeof row.mi === 'number' ? row.mi.toFixed(1) : row.mi}</span></td>
-          <td><span class="score-pill ${row.piqsClass}">${typeof row.piqs === 'number' ? row.piqs.toFixed(1) : row.piqs}</span></td>
-          <td>${row.status}</td>
-        </tr>
-      `).join('');
-      breakdownSection.style.display = '';
-    }
+    renderScoreResult(data, file.name);
 
     // Save to history
     saveScoringHistory({
-      id:        Date.now(),
-      fileName:  file.name,
-      date:      new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      mi:        miVal,
-      piqs:      piqsVal,
-      breakdown: breakdownRows,
+      id:       Date.now(),
+      fileName: file.name,
+      date:     new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      mi:       data.summary?.avg_mi_score  ?? null,
+      ck:       data.summary?.ck_overall_score ?? null,
+      pattern:  data.summary?.pattern_name  ?? null,
+      snapshot: data,
     });
 
   } catch (err) {
@@ -372,10 +430,10 @@ function renderScoringHistory() {
   list.innerHTML = history.map((entry, i) => `
     <li class="history-item" data-index="${i}">
       <span class="history-item-name" title="${escapeHtml(entry.fileName)}">${escapeHtml(entry.fileName)}</span>
-      <span class="history-item-date">${entry.date}</span>
+      <span class="history-item-date">${entry.date}${entry.pattern ? ` · ${escapeHtml(entry.pattern)}` : ''}</span>
       <div class="history-item-scores">
         <span class="history-score-pill mi">MI ${entry.mi !== null && entry.mi !== undefined ? Number(entry.mi).toFixed(1) : '--'}</span>
-        <span class="history-score-pill piqs">PIQS ${entry.piqs !== null && entry.piqs !== undefined ? Number(entry.piqs).toFixed(1) : '--'}</span>
+        ${entry.ck !== null && entry.ck !== undefined ? `<span class="history-score-pill ck">CK ${Number(entry.ck).toFixed(1)}</span>` : ''}
       </div>
     </li>
   `).join('');
@@ -391,24 +449,22 @@ function renderScoringHistory() {
 }
 
 function loadHistoryEntry(entry) {
-  setMetric(miScore,   miBar,   entry.mi   ?? null);
-  setMetric(pigsScore, pigsBar, entry.piqs ?? null);
-
   scoringFileName.textContent = entry.fileName;
   scoringFileName.classList.add('has-file');
 
-  if (entry.breakdown && entry.breakdown.length > 0) {
-    breakdownTbody.innerHTML = entry.breakdown.map(row => `
-      <tr>
-        <td>${escapeHtml(row.file)}</td>
-        <td><span class="score-pill ${row.miClass}">${typeof row.mi === 'number' ? row.mi.toFixed(1) : row.mi}</span></td>
-        <td><span class="score-pill ${row.piqsClass}">${typeof row.piqs === 'number' ? row.piqs.toFixed(1) : row.piqs}</span></td>
-        <td>${row.status}</td>
-      </tr>
-    `).join('');
-    breakdownSection.style.display = '';
+  if (entry.snapshot) {
+    renderScoreResult(entry.snapshot, entry.fileName);
   } else {
+    // Fallback for entries saved before full snapshot was stored
+    setMetric(miScore, miBar, entry.mi ?? null);
+    if (entry.ck !== null && entry.ck !== undefined) {
+      setMetric(ckScoreEl, ckBar, entry.ck);
+      ckCard.style.display = '';
+    } else {
+      ckCard.style.display = 'none';
+    }
     breakdownSection.style.display = 'none';
+    halsteadSection.style.display  = 'none';
   }
 }
 
