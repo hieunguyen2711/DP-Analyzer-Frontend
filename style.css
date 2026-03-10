@@ -721,6 +721,20 @@ h1 {
 
 .breakdown-table tr:hover td { background: #f9fafb; }
 
+/* --- Class type badge --- */
+.type-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.type-class      { background: #ede9fe; color: #5b21b6; }
+.type-innerclass { background: #eff6ff; color: #1d4ed8; }
+.type-anonymous  { background: #f3f4f6; color: #6b7280; }
+.type-interface  { background: #ecfdf5; color: #065f46; }
+
 .score-pill {
   display: inline-block;
   padding: 0.2rem 0.65rem;

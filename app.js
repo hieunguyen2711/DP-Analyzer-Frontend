@@ -335,24 +335,40 @@ function renderScoreResult(data) {
 
   // Per-class Breakdown
   const hasCK = Array.isArray(data.methods) && data.methods.length > 0;
+  console.log('[breakdown] data.classes:', data.classes, '| hasCK:', hasCK);
+  if (data.classes?.length > 0) {
+    console.log('[breakdown] first class sample:', JSON.stringify(data.classes[0], null, 2));
+  }
   breakdownThead.innerHTML = `<tr>
-    <th>Class</th><th>File</th><th>MI Score</th>
+    <th>Class</th><th>File</th><th>Type</th><th>MI Score</th>
     ${hasCK ? '<th>WMC</th><th>CBO</th><th>RFC</th>' : ''}
     <th>Status</th>
   </tr>`;
   if (Array.isArray(data.classes) && data.classes.length > 0) {
     breakdownTbody.innerHTML = data.classes.map(cls => {
-      const mi      = cls.mi_score ?? null;
+      // mi is a nested object — try common field names
+      const miObj   = cls.mi ?? {};
+      const mi      = miObj.score ?? miObj.mi_score ?? miObj.value ?? cls.mi_score ?? null;
       const pillCls = mi !== null ? scorePillClass(mi) : 'poor';
+
+      // ck metrics are nested inside cls.ck
+      const ckObj   = cls.ck ?? {};
       const ckCols  = hasCK
-        ? `<td>${cls.wmc ?? '—'}</td><td>${cls.cbo ?? '—'}</td><td>${cls.rfc ?? '—'}</td>`
+        ? `<td>${ckObj.wmc ?? '—'}</td><td>${ckObj.cbo ?? '—'}</td><td>${ckObj.rfc ?? '—'}</td>`
         : '';
+
+      // file path field
+      const filePath = cls.file_path ?? cls.file_name ?? cls.file ?? '—';
+      // show just the filename portion to keep the cell tight
+      const fileName = filePath.split('/').pop();
+
       return `<tr>
         <td style="font-weight:600">${escapeHtml(cls.class_name ?? cls.name ?? '—')}</td>
-        <td style="color:#9ca3af;font-size:0.8rem">${escapeHtml(cls.file_name ?? cls.file ?? '—')}</td>
+        <td style="color:#9ca3af;font-size:0.8rem" title="${escapeHtml(filePath)}">${escapeHtml(fileName)}</td>
+        <td><span class="type-badge type-${cls.type ?? 'class'}">${cls.type ?? '—'}</span></td>
         <td><span class="score-pill ${pillCls}">${mi !== null ? mi.toFixed(1) : '—'}</span></td>
         ${ckCols}
-        <td>${cls.status ?? miStatusHtml(mi)}</td>
+        <td>${miStatusHtml(mi)}</td>
       </tr>`;
     }).join('');
     breakdownSection.style.display = '';
@@ -395,6 +411,7 @@ scoringForm.addEventListener('submit', async (e) => {
     }
 
     const data = await response.json();
+    console.log('[analyze-metrics] response:', data);
 
     renderScoreResult(data, file.name);
 
