@@ -734,6 +734,16 @@ h1 {
 .score-pill.low     { background: #ffedd5; color: #c2410c; }
 .score-pill.poor    { background: #fee2e2; color: #b91c1c; }
 
+.scoring-error-banner {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 /* --- Summary Stats Row --- */
 .summary-stats {
   display: flex;

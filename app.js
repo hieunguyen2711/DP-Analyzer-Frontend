@@ -286,6 +286,9 @@ function miStatusHtml(mi) {
 function renderScoreResult(data) {
   const s = data.summary;
 
+  // Dismiss any previous error
+  document.getElementById('scoring-error-banner')?.remove();
+
   // Summary stats
   document.getElementById('stat-files').textContent   = s.total_files   ?? '--';
   document.getElementById('stat-classes').textContent = s.total_classes ?? '--';
@@ -356,6 +359,18 @@ function renderScoreResult(data) {
   }
 }
 
+function appendScoringError(msg) {
+  // Remove any existing error banner
+  document.getElementById('scoring-error-banner')?.remove();
+  const banner = document.createElement('div');
+  banner.id = 'scoring-error-banner';
+  banner.className = 'scoring-error-banner';
+  banner.textContent = msg;
+  // Insert above the metrics grid
+  const metricsGrid = document.getElementById('metrics-grid');
+  metricsGrid.parentElement.insertBefore(banner, metricsGrid);
+}
+
 scoringForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -369,12 +384,15 @@ scoringForm.addEventListener('submit', async (e) => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('http://localhost:8000/score', {
+    const response = await fetch('http://localhost:8000/api/v1/analyze-metrics', {
       method: 'POST',
       body: formData,
     });
 
-    if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`Server error: ${response.status} ${response.statusText}${errBody ? ' — ' + errBody : ''}`);
+    }
 
     const data = await response.json();
 
@@ -385,17 +403,17 @@ scoringForm.addEventListener('submit', async (e) => {
       id:       Date.now(),
       fileName: file.name,
       date:     new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      mi:       data.summary?.avg_mi_score  ?? null,
+      mi:       data.summary?.avg_mi_score     ?? null,
       ck:       data.summary?.ck_overall_score ?? null,
-      pattern:  data.summary?.pattern_name  ?? null,
+      pattern:  data.summary?.pattern_name     ?? null,
       snapshot: data,
     });
 
   } catch (err) {
-    // Endpoint not yet available — show friendly message
-    const isNotFound = err.message.includes('404') || err.message === 'Failed to fetch';
-    scoringSubmitBtn.textContent = isNotFound ? 'Coming soon…' : `Error: ${err.message}`;
-    setTimeout(() => { scoringSubmitBtn.textContent = 'Run Analysis'; }, 2500);
+    const msg = err.message === 'Failed to fetch'
+      ? 'Could not reach the server. Make sure the backend is running and CORS is enabled.'
+      : err.message;
+    appendScoringError(msg);
   } finally {
     scoringSubmitBtn.disabled = false;
     if (scoringSubmitBtn.textContent === 'Analyzing…') scoringSubmitBtn.textContent = 'Run Analysis';
