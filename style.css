@@ -1122,3 +1122,217 @@ h1 {
     max-height: 220px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Obfuscated Metrics Dashboard
+═══════════════════════════════════════════════════════════════════════════ */
+
+.container.obf-wide {
+  max-width: 1200px;
+}
+
+/* --- Summary strip --- */
+.obf-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.obf-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 90px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.75rem 0.5rem;
+}
+
+.obf-stat-green { background: #f0fdf4; border-color: #bbf7d0; }
+.obf-stat-yellow { background: #fefce8; border-color: #fde047; }
+.obf-stat-red    { background: #fef2f2; border-color: #fca5a5; }
+
+.obf-stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1.1;
+}
+
+.obf-stat-green  .obf-stat-value { color: #15803d; }
+.obf-stat-yellow .obf-stat-value { color: #854d0e; }
+.obf-stat-red    .obf-stat-value { color: #b91c1c; }
+
+.obf-stat-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+/* --- Controls row --- */
+.obf-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.obf-search {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.55rem 0.9rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #1a1a2e;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.obf-search:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+  background: #fff;
+}
+
+.obf-sort-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.obf-sort-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.obf-select {
+  padding: 0.5rem 0.7rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: #374151;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.obf-select:focus { border-color: #6366f1; }
+
+/* --- Table --- */
+.obf-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.obf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  white-space: nowrap;
+}
+
+.obf-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.obf-table th {
+  background: #f9fafb;
+  padding: 0.65rem 0.9rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e5e7eb;
+  user-select: none;
+}
+
+.obf-table th[data-col]:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.obf-th-sorted-asc::after  { content: ' \2191'; color: #6366f1; }
+.obf-th-sorted-desc::after { content: ' \2193'; color: #6366f1; }
+
+.obf-table td {
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.obf-table tr:last-child td { border-bottom: none; }
+
+.obf-table tr:hover td { background: #f9fafb; }
+
+.obf-pattern-name {
+  font-weight: 600;
+  color: #1a1a2e;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.obf-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.obf-bugs-warn {
+  color: #c2410c;
+  font-weight: 600;
+}
+
+/* MI range column */
+.obf-range {
+  font-size: 0.78rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+.obf-range-min { color: #b91c1c; font-weight: 600; }
+.obf-range-max { color: #15803d; font-weight: 600; }
+.obf-range-sep { margin: 0 0.2rem; color: #d1d5db; }
+
+/* Distribution bar */
+.obf-dist-cell {
+  min-width: 130px;
+}
+
+.obf-dist-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: #f3f4f6;
+  margin-bottom: 0.3rem;
+  min-width: 80px;
+}
+
+.obf-dist-seg { height: 100%; transition: width 0.3s; }
+.obf-seg-green  { background: #22c55e; }
+.obf-seg-yellow { background: #eab308; }
+.obf-seg-red    { background: #ef4444; }
+
+.obf-dist-labels {
+  font-size: 0.68rem;
+  display: flex;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+

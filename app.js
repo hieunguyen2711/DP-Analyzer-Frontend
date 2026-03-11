@@ -11,11 +11,16 @@ document.querySelectorAll('.nav-link').forEach(link => {
     document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
     document.getElementById('tab-' + tab).classList.remove('hidden');
 
-    // Widen container for the Scoring Dashboard so the sidebar fits
+    // Widen container for Scoring Dashboard or Obfuscated Metrics
     if (tab === 'scoring') {
       mainContainer.classList.add('scoring-wide');
-    } else {
+      mainContainer.classList.remove('obf-wide');
+    } else if (tab === 'obfuscated') {
+      mainContainer.classList.add('obf-wide');
       mainContainer.classList.remove('scoring-wide');
+      loadObfuscatedData();
+    } else {
+      mainContainer.classList.remove('scoring-wide', 'obf-wide');
     }
   });
 });
@@ -666,3 +671,135 @@ function renderMarkdown(text) {
     // Clean up empty paragraphs
     .replace(/<p>\s*<\/p>/g, '');
 }
+
+// ── Obfuscated Metrics Dashboard ────────────────────────────────────────────
+let _obfData = null;
+let _obfSortCol = 'avg_mi_score';
+let _obfSortDir = 'desc';
+
+async function loadObfuscatedData() {
+  if (_obfData) { renderObfuscated(); return; }
+  try {
+    const res = await fetch('obfuscated_metrics_results.json');
+    if (!res.ok) throw new Error(res.statusText);
+    _obfData = await res.json();
+    renderObfuscated();
+  } catch (err) {
+    document.getElementById('obf-tbody').innerHTML =
+      `<tr><td colspan="12" style="text-align:center;color:#b91c1c;padding:2rem">Failed to load data: ${err.message}</td></tr>`;
+  }
+}
+
+function miPillHtml(score) {
+  if (score == null) return '—';
+  const cls = score >= 75 ? 'good' : score >= 50 ? 'moderate' : score >= 10 ? 'low' : 'poor';
+  return `<span class="score-pill ${cls}">${score.toFixed(1)}</span>`;
+}
+
+function ckPillHtml(score) {
+  if (score == null) return '—';
+  const cls = score >= 80 ? 'good' : score >= 60 ? 'moderate' : score >= 40 ? 'low' : 'poor';
+  return `<span class="score-pill ${cls}">${score.toFixed(1)}</span>`;
+}
+
+function distBarHtml(dist) {
+  const g = dist?.green  ?? 0;
+  const y = dist?.yellow ?? 0;
+  const r = dist?.red    ?? 0;
+  const total = g + y + r || 1;
+  const gPct = (g / total * 100).toFixed(1);
+  const yPct = (y / total * 100).toFixed(1);
+  const rPct = (r / total * 100).toFixed(1);
+  return `
+    <div class="obf-dist-bar" title="Good: ${g} | Moderate: ${y} | Low: ${r}">
+      <div class="obf-dist-seg obf-seg-green"  style="width:${gPct}%"></div>
+      <div class="obf-dist-seg obf-seg-yellow" style="width:${yPct}%"></div>
+      <div class="obf-dist-seg obf-seg-red"    style="width:${rPct}%"></div>
+    </div>
+    <span class="obf-dist-labels"><span style="color:#15803d">${g}G</span> <span style="color:#854d0e">${y}M</span> <span style="color:#b91c1c">${r}L</span></span>
+  `;
+}
+
+function renderObfuscated() {
+  if (!_obfData) return;
+
+  const query   = (document.getElementById('obf-search')?.value ?? '').toLowerCase();
+  const sortCol = _obfSortCol;
+  const sortDir = _obfSortDir;
+
+  // Filter
+  let rows = _obfData.filter(d => d.pattern.toLowerCase().includes(query));
+
+  // Sort
+  rows.sort((a, b) => {
+    const av = a[sortCol] ?? '';
+    const bv = b[sortCol] ?? '';
+    if (typeof av === 'number') return sortDir === 'asc' ? av - bv : bv - av;
+    return sortDir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+  });
+
+  // Aggregate stats (over full dataset, not filtered)
+  const all = _obfData;
+  document.getElementById('obf-total-count').textContent   = all.length;
+  document.getElementById('obf-avg-mi').textContent        = (all.reduce((s, d) => s + (d.avg_mi_score ?? 0), 0) / all.length).toFixed(1);
+  document.getElementById('obf-avg-ck').textContent        = (all.reduce((s, d) => s + (d.ck_overall_score ?? 0), 0) / all.length).toFixed(1);
+  document.getElementById('obf-dist-green').textContent    = all.reduce((s, d) => s + (d.mi_distribution?.green  ?? 0), 0);
+  document.getElementById('obf-dist-yellow').textContent   = all.reduce((s, d) => s + (d.mi_distribution?.yellow ?? 0), 0);
+  document.getElementById('obf-dist-red').textContent      = all.reduce((s, d) => s + (d.mi_distribution?.red    ?? 0), 0);
+  document.getElementById('obf-total-bugs').textContent    = all.reduce((s, d) => s + (d.total_estimated_bugs ?? 0), 0).toFixed(2);
+
+  // Update sort indicator on headers
+  document.querySelectorAll('.obf-table th').forEach(th => {
+    th.classList.remove('obf-th-sorted-asc', 'obf-th-sorted-desc');
+    if (th.dataset.col === sortCol) th.classList.add(`obf-th-sorted-${sortDir}`);
+  });
+
+  // Render rows
+  const tbody = document.getElementById('obf-tbody');
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#9ca3af;padding:2rem">No patterns match your search.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(d => `
+    <tr>
+      <td class="obf-pattern-name">${escapeHtml(d.pattern)}</td>
+      <td class="obf-num">${d.total_files}</td>
+      <td class="obf-num">${d.total_classes}</td>
+      <td>${miPillHtml(d.avg_mi_score)}</td>
+      <td class="obf-range">
+        <span class="obf-range-min">${d.min_mi_score?.toFixed(1) ?? '—'}</span>
+        <span class="obf-range-sep">–</span>
+        <span class="obf-range-max">${d.max_mi_score?.toFixed(1) ?? '—'}</span>
+      </td>
+      <td class="obf-dist-cell">${distBarHtml(d.mi_distribution)}</td>
+      <td>${ckPillHtml(d.ck_overall_score)}</td>
+      <td class="obf-num">${d.avg_wmc?.toFixed(1) ?? '—'}</td>
+      <td class="obf-num">${d.avg_cbo?.toFixed(1) ?? '—'}</td>
+      <td class="obf-num">${d.avg_rfc?.toFixed(1) ?? '—'}</td>
+      <td class="obf-num">${d.avg_dit?.toFixed(1) ?? '—'}</td>
+      <td class="obf-num ${(d.total_estimated_bugs ?? 0) > 2 ? 'obf-bugs-warn' : ''}">${d.total_estimated_bugs?.toFixed(3) ?? '—'}</td>
+    </tr>
+  `).join('');
+}
+
+// Click-to-sort on column headers
+document.querySelectorAll('.obf-table th[data-col]').forEach(th => {
+  th.style.cursor = 'pointer';
+  th.addEventListener('click', () => {
+    if (_obfSortCol === th.dataset.col) {
+      _obfSortDir = _obfSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      _obfSortCol = th.dataset.col;
+      _obfSortDir = th.dataset.col === 'pattern' ? 'asc' : 'desc';
+    }
+    document.getElementById('obf-sort-col').value = _obfSortCol;
+    document.getElementById('obf-sort-dir').value = _obfSortDir;
+    renderObfuscated();
+  });
+});
+
+document.getElementById('obf-search').addEventListener('input', renderObfuscated);
+document.getElementById('obf-sort-col').addEventListener('change', e => { _obfSortCol = e.target.value; renderObfuscated(); });
+document.getElementById('obf-sort-dir').addEventListener('change', e => { _obfSortDir = e.target.value; renderObfuscated(); });
+

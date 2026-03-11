@@ -13,6 +13,7 @@
         <li><a href="#" class="nav-link active" data-tab="generate">Generate</a></li>
         <li><a href="#" class="nav-link" data-tab="analyze">Analyze Single</a></li>
         <li><a href="#" class="nav-link" data-tab="scoring">Scoring Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-tab="obfuscated">Obfuscated Metrics</a></li>
       </ul>
     </nav>
     <div class="container">
@@ -304,7 +305,88 @@
         </div><!-- /scoring-layout -->
       </div>
 
-    </div>
+      <!-- Obfuscated Metrics Tab -->
+      <div id="tab-obfuscated" class="tab-panel hidden">
+        <h1>Obfuscated Metrics</h1>
+        <p class="subtitle">MI Score and CK quality across <strong id="obf-total-count">--</strong> obfuscated design-pattern implementations.</p>
+
+        <!-- Aggregate summary strip -->
+        <div class="obf-summary" id="obf-summary">
+          <div class="obf-stat">
+            <span class="obf-stat-value" id="obf-avg-mi">--</span>
+            <span class="obf-stat-label">Avg MI Score</span>
+          </div>
+          <div class="obf-stat">
+            <span class="obf-stat-value" id="obf-avg-ck">--</span>
+            <span class="obf-stat-label">Avg CK Score</span>
+          </div>
+          <div class="obf-stat obf-stat-green">
+            <span class="obf-stat-value" id="obf-dist-green">--</span>
+            <span class="obf-stat-label">Good Classes</span>
+          </div>
+          <div class="obf-stat obf-stat-yellow">
+            <span class="obf-stat-value" id="obf-dist-yellow">--</span>
+            <span class="obf-stat-label">Moderate Classes</span>
+          </div>
+          <div class="obf-stat obf-stat-red">
+            <span class="obf-stat-value" id="obf-dist-red">--</span>
+            <span class="obf-stat-label">Low Classes</span>
+          </div>
+          <div class="obf-stat">
+            <span class="obf-stat-value" id="obf-total-bugs">--</span>
+            <span class="obf-stat-label">Total Est. Bugs</span>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="obf-controls">
+          <input type="search" id="obf-search" class="obf-search" placeholder="Filter by pattern name…" />
+          <div class="obf-sort-group">
+            <label class="obf-sort-label" for="obf-sort-col">Sort</label>
+            <select id="obf-sort-col" class="obf-select">
+              <option value="pattern">Pattern</option>
+              <option value="avg_mi_score" selected>MI Score</option>
+              <option value="ck_overall_score">CK Score</option>
+              <option value="total_files">Files</option>
+              <option value="total_classes">Classes</option>
+              <option value="total_estimated_bugs">Est. Bugs</option>
+              <option value="avg_wmc">WMC</option>
+              <option value="avg_cbo">CBO</option>
+              <option value="avg_rfc">RFC</option>
+              <option value="avg_dit">DIT</option>
+            </select>
+            <select id="obf-sort-dir" class="obf-select">
+              <option value="asc">Asc</option>
+              <option value="desc" selected>Desc</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="obf-table-wrap">
+          <table class="obf-table" id="obf-table">
+            <thead>
+              <tr>
+                <th data-col="pattern">Pattern</th>
+                <th data-col="total_files">Files</th>
+                <th data-col="total_classes">Classes</th>
+                <th data-col="avg_mi_score">Avg MI</th>
+                <th>MI Range</th>
+                <th>Distribution</th>
+                <th data-col="ck_overall_score">CK Score</th>
+                <th data-col="avg_wmc">WMC</th>
+                <th data-col="avg_cbo">CBO</th>
+                <th data-col="avg_rfc">RFC</th>
+                <th data-col="avg_dit">DIT</th>
+                <th data-col="total_estimated_bugs">Est. Bugs</th>
+              </tr>
+            </thead>
+            <tbody id="obf-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /container -->
 
     <script src="app.js"></script>
   </body>
