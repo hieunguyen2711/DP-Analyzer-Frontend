@@ -166,7 +166,8 @@ h1 {
   background: #4f46e5;
 }
 
-#create-files-btn {
+#create-files-btn,
+#download-bundle-btn {
   width: 100%;
   margin-top: 0.75rem;
   padding: 0.65rem;
@@ -180,7 +181,8 @@ h1 {
   transition: background 0.2s, color 0.2s;
 }
 
-#create-files-btn:hover {
+#create-files-btn:hover,
+#download-bundle-btn:hover {
   background: #6366f1;
   color: #ffffff;
 }

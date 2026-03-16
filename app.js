@@ -39,15 +39,23 @@ const generateContext = document.getElementById('generate-context');
 const generateBtn = document.getElementById('generate-btn');
 const generateResponseBox = document.getElementById('generate-response-box');
 const createFilesBtn = document.getElementById('create-files-btn');
+const downloadBundleBtn = document.getElementById('download-bundle-btn');
 
 let lastGeneratedFiles = [];
 let lastPattern = '';
 let lastDescription = '';
+let lastBatchJobId = '';
+let lastBatchBundleFilename = 'generated_projects_bundle.zip';
 const chatInput = document.getElementById('chat-input');
 const chatSendBtn = document.getElementById('chat-send-btn');
 const chatForm = document.getElementById('chat-form');
 
 let lastAnalysis = '';
+
+const API_BASE_URL = 'http://localhost:8000';
+const BATCH_GENERATE_MODEL = 'qwen3-coder-30b-a3b-instruct';
+const BATCH_GENERATE_CONCURRENCY = 1;
+const BATCH_POLL_INTERVAL_MS = 2500;
 
 // ── Chat helpers ───────────────────────────────────────────────────────────
 function appendBubble(html, role, state = '') {
@@ -108,6 +116,116 @@ function handleFile(file) {
   submitBtn.disabled = false;
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function makeServerError(status, statusText, bodyText = '') {
+  return new Error(`Server error: ${status} ${statusText}${bodyText ? ` — ${bodyText}` : ''}`);
+}
+
+function extractBundleFilename(statusData) {
+  const relativePath = String(statusData?.final_bundle_relative_path ?? '').trim();
+  if (!relativePath) return 'generated_projects_bundle.zip';
+  const parts = relativePath.split('/').filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : 'generated_projects_bundle.zip';
+}
+
+function renderBatchProgress(statusData, subtext = '') {
+  const total = statusData?.total_patterns ?? 0;
+  const completed = statusData?.completed_patterns ?? 0;
+  const successful = statusData?.successful_patterns ?? 0;
+  const failed = statusData?.failed_patterns ?? 0;
+  const status = statusData?.status ?? 'running';
+  const percent = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
+  const failedHtml = failed > 0
+    ? `<span style="color:#c2410c;font-weight:600;">${failed} failed</span>`
+    : `${failed} failed`;
+
+  generateResponseBox.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:0.65rem;">
+      <div style="font-weight:600;color:#374151;">Generating pass-pattern projects (83 patterns)</div>
+      <div style="font-size:0.82rem;color:#6b7280;">Job: ${escapeHtml(statusData?.job_id ?? '—')}</div>
+      <div style="font-size:0.82rem;color:#6b7280;">Status: <strong style="color:#4f46e5;">${escapeHtml(String(status))}</strong> · ${completed}/${total} completed · ${successful} successful · ${failedHtml}</div>
+      <div style="height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;">
+        <div style="width:${percent}%;height:100%;background:#6366f1;transition:width 0.25s;"></div>
+      </div>
+      ${subtext ? `<div style="font-size:0.8rem;color:#6b7280;">${subtext}</div>` : ''}
+    </div>
+  `;
+}
+
+async function startBatchPassProjects(projectContext) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/generate-pass-projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      project_context: projectContext,
+      model: BATCH_GENERATE_MODEL,
+      concurrency: BATCH_GENERATE_CONCURRENCY,
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    throw makeServerError(response.status, response.statusText, errBody);
+  }
+
+  const data = await response.json();
+  if (!data.job_id) throw new Error('Batch generation did not return a job_id.');
+  return data;
+}
+
+async function pollBatchPassProjects(jobId) {
+  const normalizedJobId = encodeURIComponent(jobId);
+
+  for (let attempt = 0; attempt < 1200; attempt += 1) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/generate-pass-projects/${normalizedJobId}`);
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw makeServerError(response.status, response.statusText, errBody);
+    }
+
+    const statusData = await response.json();
+    renderBatchProgress(statusData);
+
+    const status = String(statusData.status ?? '').toLowerCase();
+    if (status === 'completed') return statusData;
+    if (status === 'failed' || status === 'error' || status === 'cancelled') {
+      throw new Error(`Batch generation ended with status: ${statusData.status ?? 'unknown'}`);
+    }
+
+    await sleep(BATCH_POLL_INTERVAL_MS);
+  }
+
+  throw new Error('Batch generation timed out while waiting for completion.');
+}
+
+async function downloadBatchPassProjects(jobId) {
+  const normalizedJobId = encodeURIComponent(jobId);
+  const response = await fetch(`${API_BASE_URL}/api/v1/generate-pass-projects/${normalizedJobId}/download`);
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    throw makeServerError(response.status, response.statusText, errBody);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const filenameMatch = disposition.match(/filename="?([^\"]+)"?/);
+  const filename = filenameMatch ? filenameMatch[1] : 'generated_projects_bundle.zip';
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+
+  return filename;
+}
+
 // ── Generate form submit ───────────────────────────────────────────────────
 generateForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -118,10 +236,54 @@ generateForm.addEventListener('submit', async (e) => {
   if (!pattern || !description) return;
 
   generateBtn.disabled = true;
+  createFilesBtn.hidden = true;
+  downloadBundleBtn.hidden = true;
+  lastBatchJobId = '';
+  lastBatchBundleFilename = 'generated_projects_bundle.zip';
   generateResponseBox.innerHTML = '<span style="color:#6366f1;font-style:italic;">Generating…</span>';
 
   try {
-    const response = await fetch('http://localhost:8000/generate', {
+    if (pattern === 'Select All') {
+      lastGeneratedFiles = [];
+      lastPattern = '';
+      lastDescription = description;
+
+      generateResponseBox.innerHTML = '<span style="color:#6366f1;font-style:italic;">Starting async generation for all pass patterns…</span>';
+
+      const startData = await startBatchPassProjects(description);
+
+      renderBatchProgress(
+        {
+          job_id: startData.job_id,
+          status: startData.status ?? 'queued',
+          total_patterns: startData.total_patterns ?? 83,
+          completed_patterns: 0,
+          successful_patterns: 0,
+          failed_patterns: 0,
+        },
+        'Polling job progress every 2.5s…',
+      );
+
+      const finalStatus = await pollBatchPassProjects(startData.job_id);
+      renderBatchProgress(finalStatus, 'Generation completed. Bundle is ready to download.');
+
+      lastBatchJobId = startData.job_id;
+      lastBatchBundleFilename = extractBundleFilename(finalStatus);
+      downloadBundleBtn.hidden = false;
+      downloadBundleBtn.textContent = `Download ${lastBatchBundleFilename}`;
+
+      generateResponseBox.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:0.55rem;">
+          <div style="font-weight:600;color:#15803d;">Batch generation completed</div>
+          <div style="font-size:0.82rem;color:#6b7280;">${finalStatus.completed_patterns ?? 0}/${finalStatus.total_patterns ?? 83} patterns processed · ${finalStatus.successful_patterns ?? 0} successful · ${finalStatus.failed_patterns ?? 0} failed</div>
+          <div style="font-size:0.82rem;color:#4b5563;">Bundle ready: <strong>${escapeHtml(lastBatchBundleFilename)}</strong>. Click the download button below.</div>
+        </div>
+      `;
+
+      return;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pattern, description }),
@@ -188,7 +350,7 @@ createFilesBtn.addEventListener('click', async () => {
   createFilesBtn.textContent = 'Packaging…';
 
   try {
-    const response = await fetch('http://localhost:8000/package', {
+    const response = await fetch(`${API_BASE_URL}/package`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -217,6 +379,33 @@ createFilesBtn.addEventListener('click', async () => {
   } finally {
     createFilesBtn.disabled = false;
     createFilesBtn.textContent = 'Create Java Files';
+  }
+});
+
+downloadBundleBtn.addEventListener('click', async () => {
+  if (!lastBatchJobId) return;
+
+  downloadBundleBtn.disabled = true;
+  downloadBundleBtn.textContent = 'Downloading…';
+
+  try {
+    const downloadedFilename = await downloadBatchPassProjects(lastBatchJobId);
+    lastBatchBundleFilename = downloadedFilename || lastBatchBundleFilename;
+    generateResponseBox.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:0.55rem;">
+        <div style="font-weight:600;color:#15803d;">Batch generation completed</div>
+        <div style="font-size:0.82rem;color:#4b5563;">Download started: <strong>${escapeHtml(lastBatchBundleFilename)}</strong></div>
+      </div>
+    `;
+  } catch (err) {
+    const isCors = err.message === 'Failed to fetch';
+    const msg = isCors
+      ? 'Failed to fetch — CORS error. Add Access-Control-Allow-Origin: * to your backend.'
+      : `Error: ${err.message}`;
+    generateResponseBox.innerHTML = `<span style="color:#dc2626;">${msg}</span>`;
+  } finally {
+    downloadBundleBtn.disabled = false;
+    downloadBundleBtn.textContent = `Download ${lastBatchBundleFilename}`;
   }
 });
 
