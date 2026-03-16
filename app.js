@@ -11,16 +11,20 @@ document.querySelectorAll('.nav-link').forEach(link => {
     document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
     document.getElementById('tab-' + tab).classList.remove('hidden');
 
-    // Widen container for Scoring Dashboard or Obfuscated Metrics
+    // Widen container for dashboard-style tabs
     if (tab === 'scoring') {
       mainContainer.classList.add('scoring-wide');
-      mainContainer.classList.remove('obf-wide');
+      mainContainer.classList.remove('obf-wide', 'context-wide');
     } else if (tab === 'obfuscated') {
       mainContainer.classList.add('obf-wide');
-      mainContainer.classList.remove('scoring-wide');
+      mainContainer.classList.remove('scoring-wide', 'context-wide');
       loadObfuscatedData();
-    } else {
+    } else if (tab === 'context') {
+      mainContainer.classList.add('context-wide');
       mainContainer.classList.remove('scoring-wide', 'obf-wide');
+      loadContextMetricsData();
+    } else {
+      mainContainer.classList.remove('scoring-wide', 'obf-wide', 'context-wide');
     }
   });
 });
@@ -676,6 +680,56 @@ function renderMarkdown(text) {
 let _obfData = null;
 let _obfSortCol = 'avg_mi_score';
 let _obfSortDir = 'desc';
+let _ctxSortCol = 'avg_mi_score';
+let _ctxSortDir = 'desc';
+let _ctxSelectedPattern = null;
+
+const PATTERN_ACRONYMS = new Set(['MVC', 'MVP', 'DAO', 'DTO', 'CRTP', 'RAII']);
+
+function formatPatternLabel(pattern) {
+  return String(pattern ?? '')
+    .split('-')
+    .filter(Boolean)
+    .map(token => {
+      const upperToken = token.toUpperCase();
+      if (PATTERN_ACRONYMS.has(upperToken)) return upperToken;
+      return token.charAt(0).toUpperCase() + token.slice(1);
+    })
+    .join(' ');
+}
+
+function ckScorePillClass(score) {
+  return score >= 80 ? 'good' : score >= 60 ? 'moderate' : score >= 40 ? 'low' : 'poor';
+}
+
+function describeProjectScale(files, classes) {
+  const size = Math.max(files ?? 0, classes ?? 0);
+  if (size >= 16) return 'Large';
+  if (size >= 9) return 'Medium';
+  return 'Small';
+}
+
+function describeMiProfile(score) {
+  if (score == null) return 'Unknown';
+  if (score >= 75) return 'Good';
+  if (score >= 50) return 'Moderate';
+  if (score >= 10) return 'Low';
+  return 'Unmaintainable';
+}
+
+function describeCkProfile(score) {
+  if (score == null) return 'Unknown';
+  if (score >= 80) return 'Strong';
+  if (score >= 60) return 'Moderate';
+  if (score >= 40) return 'Low';
+  return 'Weak';
+}
+
+function describeRiskProfile(bugs) {
+  if (bugs > 2) return 'Elevated';
+  if (bugs > 1) return 'Moderate';
+  return 'Low';
+}
 
 async function loadObfuscatedData() {
   if (_obfData) { renderObfuscated(); return; }
@@ -783,6 +837,159 @@ function renderObfuscated() {
   `).join('');
 }
 
+async function loadContextMetricsData() {
+  if (_obfData) { renderContextMetrics(); return; }
+  try {
+    const res = await fetch('obfuscated_metrics_results.json');
+    if (!res.ok) throw new Error(res.statusText);
+    _obfData = await res.json();
+    renderContextMetrics();
+  } catch (err) {
+    document.getElementById('ctx-tbody').innerHTML =
+      `<tr><td colspan="12" style="text-align:center;color:#b91c1c;padding:2rem">Failed to load data: ${err.message}</td></tr>`;
+    renderContextSidebar(null, 'Project context is unavailable until the dataset loads.');
+  }
+}
+
+function renderContextSidebar(row, emptyMessage = 'Select a pattern row to view its project context.') {
+  const sidebarBody = document.getElementById('context-sidebar-body');
+  if (!sidebarBody) return;
+
+  if (!row) {
+    sidebarBody.innerHTML = `<p class="context-placeholder">${escapeHtml(emptyMessage)}</p>`;
+    return;
+  }
+
+  const patternName = formatPatternLabel(row.pattern);
+  const status = row.status ?? 'Unknown';
+  const files = row.total_files ?? 0;
+  const classes = row.total_classes ?? 0;
+  const mi = row.avg_mi_score ?? null;
+  const ck = row.ck_overall_score ?? null;
+  const bugs = row.total_estimated_bugs ?? 0;
+
+  const scale = describeProjectScale(files, classes);
+  const miProfile = describeMiProfile(mi);
+  const ckProfile = describeCkProfile(ck);
+  const riskProfile = describeRiskProfile(bugs);
+
+  sidebarBody.innerHTML = `
+    <div class="context-kv-grid">
+      <div class="context-kv">
+        <span class="context-k">Pattern</span>
+        <span class="context-v">${escapeHtml(patternName)}</span>
+      </div>
+      <div class="context-kv">
+        <span class="context-k">Status</span>
+        <span class="context-v">${escapeHtml(status)}</span>
+      </div>
+    </div>
+
+    <div class="context-badges">
+      <span class="context-badge">Scale: ${scale}</span>
+      <span class="context-badge">Risk: ${riskProfile}</span>
+    </div>
+
+    <div class="context-score-grid">
+      <div class="context-score-card">
+        <span class="context-score-label">Maintainability (MI)</span>
+        <span class="score-pill ${mi != null ? scorePillClass(mi) : 'poor'}">${mi != null ? mi.toFixed(1) : '—'}</span>
+      </div>
+      <div class="context-score-card">
+        <span class="context-score-label">OO Quality (CK)</span>
+        <span class="score-pill ${ck != null ? ckScorePillClass(ck) : 'poor'}">${ck != null ? ck.toFixed(1) : '—'}</span>
+      </div>
+    </div>
+
+    <p class="context-summary">
+      This implementation has a ${scale.toLowerCase()} footprint with ${miProfile.toLowerCase()} maintainability,
+      ${ckProfile.toLowerCase()} object-oriented quality, and ${riskProfile.toLowerCase()} estimated defect risk.
+    </p>
+
+    <ul class="context-list">
+      <li><strong>Footprint:</strong> ${files} files across ${classes} classes.</li>
+      <li><strong>MI Range:</strong> ${row.min_mi_score?.toFixed(1) ?? '—'} to ${row.max_mi_score?.toFixed(1) ?? '—'}.</li>
+      <li><strong>Class Health:</strong> ${row.mi_distribution?.green ?? 0} good, ${row.mi_distribution?.yellow ?? 0} moderate, ${row.mi_distribution?.red ?? 0} low.</li>
+      <li><strong>Complexity:</strong> WMC ${row.avg_wmc?.toFixed(1) ?? '—'}, CBO ${row.avg_cbo?.toFixed(1) ?? '—'}, RFC ${row.avg_rfc?.toFixed(1) ?? '—'}, DIT ${row.avg_dit?.toFixed(1) ?? '—'}.</li>
+      <li><strong>Estimated Bugs:</strong> ${bugs.toFixed(3)}.</li>
+    </ul>
+  `;
+}
+
+function renderContextMetrics() {
+  if (!_obfData) return;
+
+  const query = (document.getElementById('ctx-search')?.value ?? '').toLowerCase();
+  const sortCol = _ctxSortCol;
+  const sortDir = _ctxSortDir;
+
+  let rows = _obfData.filter(d => d.pattern.toLowerCase().includes(query));
+
+  rows.sort((a, b) => {
+    const av = a[sortCol] ?? '';
+    const bv = b[sortCol] ?? '';
+    if (typeof av === 'number') return sortDir === 'asc' ? av - bv : bv - av;
+    return sortDir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+  });
+
+  const all = _obfData;
+  document.getElementById('ctx-total-count').textContent = all.length;
+  document.getElementById('ctx-avg-mi').textContent = (all.reduce((sum, d) => sum + (d.avg_mi_score ?? 0), 0) / all.length).toFixed(1);
+  document.getElementById('ctx-avg-ck').textContent = (all.reduce((sum, d) => sum + (d.ck_overall_score ?? 0), 0) / all.length).toFixed(1);
+  document.getElementById('ctx-dist-green').textContent = all.reduce((sum, d) => sum + (d.mi_distribution?.green ?? 0), 0);
+  document.getElementById('ctx-dist-yellow').textContent = all.reduce((sum, d) => sum + (d.mi_distribution?.yellow ?? 0), 0);
+  document.getElementById('ctx-dist-red').textContent = all.reduce((sum, d) => sum + (d.mi_distribution?.red ?? 0), 0);
+  document.getElementById('ctx-total-bugs').textContent = all.reduce((sum, d) => sum + (d.total_estimated_bugs ?? 0), 0).toFixed(2);
+
+  document.querySelectorAll('.ctx-table th').forEach(th => {
+    th.classList.remove('ctx-th-sorted-asc', 'ctx-th-sorted-desc');
+    if (th.dataset.col === sortCol) th.classList.add(`ctx-th-sorted-${sortDir}`);
+  });
+
+  const tbody = document.getElementById('ctx-tbody');
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#9ca3af;padding:2rem">No patterns match your search.</td></tr>`;
+    _ctxSelectedPattern = null;
+    renderContextSidebar(null, 'No patterns match your search.');
+    return;
+  }
+
+  if (!_ctxSelectedPattern || !rows.some(d => d.pattern === _ctxSelectedPattern)) {
+    _ctxSelectedPattern = rows[0].pattern;
+  }
+
+  tbody.innerHTML = rows.map(d => `
+    <tr data-pattern="${escapeHtml(d.pattern)}" class="${d.pattern === _ctxSelectedPattern ? 'ctx-row-selected' : ''}">
+      <td class="ctx-pattern-name">${escapeHtml(formatPatternLabel(d.pattern))}</td>
+      <td class="ctx-num">${d.total_files}</td>
+      <td class="ctx-num">${d.total_classes}</td>
+      <td>${miPillHtml(d.avg_mi_score)}</td>
+      <td class="ctx-range">
+        <span class="ctx-range-min">${d.min_mi_score?.toFixed(1) ?? '—'}</span>
+        <span class="ctx-range-sep">–</span>
+        <span class="ctx-range-max">${d.max_mi_score?.toFixed(1) ?? '—'}</span>
+      </td>
+      <td class="ctx-dist-cell">${distBarHtml(d.mi_distribution)}</td>
+      <td>${ckPillHtml(d.ck_overall_score)}</td>
+      <td class="ctx-num">${d.avg_wmc?.toFixed(1) ?? '—'}</td>
+      <td class="ctx-num">${d.avg_cbo?.toFixed(1) ?? '—'}</td>
+      <td class="ctx-num">${d.avg_rfc?.toFixed(1) ?? '—'}</td>
+      <td class="ctx-num">${d.avg_dit?.toFixed(1) ?? '—'}</td>
+      <td class="ctx-num ${(d.total_estimated_bugs ?? 0) > 2 ? 'obf-bugs-warn' : ''}">${d.total_estimated_bugs?.toFixed(3) ?? '—'}</td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('tr[data-pattern]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      _ctxSelectedPattern = tr.dataset.pattern;
+      renderContextMetrics();
+    });
+  });
+
+  const selectedRow = rows.find(d => d.pattern === _ctxSelectedPattern) ?? rows[0];
+  renderContextSidebar(selectedRow);
+}
+
 // Click-to-sort on column headers
 document.querySelectorAll('.obf-table th[data-col]').forEach(th => {
   th.style.cursor = 'pointer';
@@ -802,4 +1009,23 @@ document.querySelectorAll('.obf-table th[data-col]').forEach(th => {
 document.getElementById('obf-search').addEventListener('input', renderObfuscated);
 document.getElementById('obf-sort-col').addEventListener('change', e => { _obfSortCol = e.target.value; renderObfuscated(); });
 document.getElementById('obf-sort-dir').addEventListener('change', e => { _obfSortDir = e.target.value; renderObfuscated(); });
+
+document.querySelectorAll('.ctx-table th[data-col]').forEach(th => {
+  th.style.cursor = 'pointer';
+  th.addEventListener('click', () => {
+    if (_ctxSortCol === th.dataset.col) {
+      _ctxSortDir = _ctxSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      _ctxSortCol = th.dataset.col;
+      _ctxSortDir = th.dataset.col === 'pattern' ? 'asc' : 'desc';
+    }
+    document.getElementById('ctx-sort-col').value = _ctxSortCol;
+    document.getElementById('ctx-sort-dir').value = _ctxSortDir;
+    renderContextMetrics();
+  });
+});
+
+document.getElementById('ctx-search').addEventListener('input', renderContextMetrics);
+document.getElementById('ctx-sort-col').addEventListener('change', e => { _ctxSortCol = e.target.value; renderContextMetrics(); });
+document.getElementById('ctx-sort-dir').addEventListener('change', e => { _ctxSortDir = e.target.value; renderContextMetrics(); });
 
