@@ -130,15 +130,41 @@ function openTab(tabName) {
   if (targetLink) targetLink.click();
 }
 
-async function requestMetricsFromGenerateInput(pattern, projectContext) {
-  const response = await fetch(`${API_BASE_URL}/api/v1/analyze-metrics`, {
+async function packageGeneratedFiles(pattern, description, files) {
+  const response = await fetch(`${API_BASE_URL}/package`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       pattern,
-      project_context: projectContext,
-      model: BATCH_GENERATE_MODEL,
+      description,
+      files: files.map(f => ({
+        filename: f.filename ?? f.name ?? 'File.java',
+        content: f.content ?? f.code ?? '',
+      })),
     }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    throw makeServerError(response.status, response.statusText, errBody);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+  const filename = filenameMatch ? filenameMatch[1] : 'design-pattern.zip';
+  return { blob, filename };
+}
+
+async function requestMetricsFromGenerateInput(pattern, projectContext, files) {
+  const { blob, filename } = await packageGeneratedFiles(pattern, projectContext, files);
+
+  const formData = new FormData();
+  formData.append('file', blob, filename);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/analyze-metrics`, {
+    method: 'POST',
+    body: formData,
   });
 
   if (!response.ok) {
@@ -261,8 +287,10 @@ generateForm.addEventListener('submit', async (e) => {
   if (!pattern || !description) return;
 
   generateBtn.disabled = true;
-  createFilesBtn.hidden = true;
-  startMetricsBtn.hidden = true;
+  createFilesBtn.disabled = true;
+  createFilesBtn.textContent = 'Generate Java Files';
+  startMetricsBtn.disabled = true;
+  startMetricsBtn.textContent = 'Start Calculating Metric';
   downloadBundleBtn.hidden = true;
   lastBatchJobId = '';
   lastBatchBundleFilename = 'generated_projects_bundle.zip';
@@ -273,7 +301,8 @@ generateForm.addEventListener('submit', async (e) => {
       lastGeneratedFiles = [];
       lastPattern = '';
       lastDescription = description;
-      startMetricsBtn.hidden = true;
+      createFilesBtn.disabled = true;
+      startMetricsBtn.disabled = true;
 
       generateResponseBox.innerHTML = '<span style="color:#6366f1;font-style:italic;">Starting async generation for all pass patterns…</span>';
 
@@ -346,8 +375,8 @@ generateForm.addEventListener('submit', async (e) => {
       </div>
     `).join('');
 
-    createFilesBtn.hidden = false;
-    startMetricsBtn.hidden = false;
+    createFilesBtn.disabled = false;
+    startMetricsBtn.disabled = false;
     lastGeneratedFiles = data.files;
     lastPattern = pattern;
     lastDescription = description;
@@ -378,35 +407,18 @@ createFilesBtn.addEventListener('click', async () => {
   createFilesBtn.textContent = 'Packaging…';
 
   try {
-    const response = await fetch(`${API_BASE_URL}/package`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        pattern: lastPattern,
-        description: lastDescription,
-        files: lastGeneratedFiles.map(f => ({
-          filename: f.filename ?? f.name ?? 'File.java',
-          content: f.content ?? f.code ?? '',
-        })),
-      }),
-    });
-
-    if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
-
-    const blob = await response.blob();
+    const { blob, filename } = await packageGeneratedFiles(lastPattern, lastDescription, lastGeneratedFiles);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const disposition = response.headers.get('Content-Disposition') ?? '';
-    const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
-    a.download = filenameMatch ? filenameMatch[1] : 'design-pattern.zip';
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) {
     alert(`Failed to create files: ${err.message}`);
   } finally {
     createFilesBtn.disabled = false;
-    createFilesBtn.textContent = 'Create Java Files';
+    createFilesBtn.textContent = 'Generate Java Files';
   }
 });
 
@@ -438,13 +450,13 @@ downloadBundleBtn.addEventListener('click', async () => {
 });
 
 startMetricsBtn.addEventListener('click', async () => {
-  if (!lastPattern || !lastDescription || lastPattern === 'Select All') return;
+  if (!lastPattern || !lastDescription || !lastGeneratedFiles.length || lastPattern === 'Select All') return;
 
   startMetricsBtn.disabled = true;
   startMetricsBtn.textContent = 'Calculating…';
 
   try {
-    const metricsData = await requestMetricsFromGenerateInput(lastPattern, lastDescription);
+    const metricsData = await requestMetricsFromGenerateInput(lastPattern, lastDescription, lastGeneratedFiles);
     renderScoreResult(metricsData);
 
     const generatedLabel = `${lastPattern} (generated context)`;

@@ -189,6 +189,16 @@ h1 {
   color: #ffffff;
 }
 
+#start-metrics-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#create-files-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* --- Drop Zone --- */
 .drop-zone {
   border: 2px dashed #cbd5e1;
