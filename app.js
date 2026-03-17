@@ -39,6 +39,7 @@ const generateContext = document.getElementById('generate-context');
 const generateBtn = document.getElementById('generate-btn');
 const generateResponseBox = document.getElementById('generate-response-box');
 const createFilesBtn = document.getElementById('create-files-btn');
+const startMetricsBtn = document.getElementById('start-metrics-btn');
 const downloadBundleBtn = document.getElementById('download-bundle-btn');
 
 let lastGeneratedFiles = [];
@@ -122,6 +123,30 @@ function sleep(ms) {
 
 function makeServerError(status, statusText, bodyText = '') {
   return new Error(`Server error: ${status} ${statusText}${bodyText ? ` — ${bodyText}` : ''}`);
+}
+
+function openTab(tabName) {
+  const targetLink = document.querySelector(`.nav-link[data-tab="${tabName}"]`);
+  if (targetLink) targetLink.click();
+}
+
+async function requestMetricsFromGenerateInput(pattern, projectContext) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/analyze-metrics`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      pattern,
+      project_context: projectContext,
+      model: BATCH_GENERATE_MODEL,
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    throw makeServerError(response.status, response.statusText, errBody);
+  }
+
+  return response.json();
 }
 
 function extractBundleFilename(statusData) {
@@ -237,6 +262,7 @@ generateForm.addEventListener('submit', async (e) => {
 
   generateBtn.disabled = true;
   createFilesBtn.hidden = true;
+  startMetricsBtn.hidden = true;
   downloadBundleBtn.hidden = true;
   lastBatchJobId = '';
   lastBatchBundleFilename = 'generated_projects_bundle.zip';
@@ -247,6 +273,7 @@ generateForm.addEventListener('submit', async (e) => {
       lastGeneratedFiles = [];
       lastPattern = '';
       lastDescription = description;
+      startMetricsBtn.hidden = true;
 
       generateResponseBox.innerHTML = '<span style="color:#6366f1;font-style:italic;">Starting async generation for all pass patterns…</span>';
 
@@ -320,6 +347,7 @@ generateForm.addEventListener('submit', async (e) => {
     `).join('');
 
     createFilesBtn.hidden = false;
+    startMetricsBtn.hidden = false;
     lastGeneratedFiles = data.files;
     lastPattern = pattern;
     lastDescription = description;
@@ -406,6 +434,43 @@ downloadBundleBtn.addEventListener('click', async () => {
   } finally {
     downloadBundleBtn.disabled = false;
     downloadBundleBtn.textContent = `Download ${lastBatchBundleFilename}`;
+  }
+});
+
+startMetricsBtn.addEventListener('click', async () => {
+  if (!lastPattern || !lastDescription || lastPattern === 'Select All') return;
+
+  startMetricsBtn.disabled = true;
+  startMetricsBtn.textContent = 'Calculating…';
+
+  try {
+    const metricsData = await requestMetricsFromGenerateInput(lastPattern, lastDescription);
+    renderScoreResult(metricsData);
+
+    const generatedLabel = `${lastPattern} (generated context)`;
+    scoringFileName.textContent = generatedLabel;
+    scoringFileName.classList.add('has-file');
+
+    saveScoringHistory({
+      id:       Date.now(),
+      fileName: generatedLabel,
+      date:     new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      mi:       metricsData.summary?.avg_mi_score     ?? null,
+      ck:       metricsData.summary?.ck_overall_score ?? null,
+      pattern:  metricsData.summary?.pattern_name     ?? lastPattern,
+      snapshot: metricsData,
+    });
+
+    openTab('scoring');
+  } catch (err) {
+    const isCors = err.message === 'Failed to fetch';
+    const msg = isCors
+      ? 'Failed to fetch — CORS error. Add Access-Control-Allow-Origin: * to your backend.'
+      : `Failed to calculate metrics: ${err.message}`;
+    generateResponseBox.innerHTML = `<span style="color:#dc2626;">${msg}</span>`;
+  } finally {
+    startMetricsBtn.disabled = false;
+    startMetricsBtn.textContent = 'Start Calculating Metric';
   }
 });
 
