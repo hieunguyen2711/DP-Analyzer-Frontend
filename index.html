@@ -14,6 +14,7 @@
         <li><a href="#" class="nav-link" data-tab="analyze">Analyze Single</a></li>
         <li><a href="#" class="nav-link" data-tab="scoring">Scoring Dashboard</a></li>
         <li><a href="#" class="nav-link" data-tab="obfuscated">Obfuscated Metrics</a></li>
+        <li><a href="#" class="nav-link" data-tab="batch-score">Project Batch Score</a></li>
       </ul>
     </nav>
     <div class="container">
@@ -146,6 +147,7 @@
           <button type="button" id="create-files-btn" disabled>Generate Java Files</button>
           <button type="button" id="start-metrics-btn" disabled>Start Calculating Metric</button>
           <button type="button" id="download-bundle-btn" hidden>Download All Projects ZIP</button>
+          <button type="button" id="batch-metrics-btn" hidden>Calculate Batch Metrics</button>
         </div>
       </div>
 
@@ -480,6 +482,92 @@
           </aside>
         </div>
       </div>
+
+      <!-- Project Batch Score Tab -->
+      <div id="tab-batch-score" class="tab-panel hidden">
+        <div class="bscore-layout">
+
+          <!-- Project history sidebar -->
+          <aside class="bscore-sidebar">
+            <div class="bscore-sidebar-header">
+              <span class="bscore-sidebar-title">Projects</span>
+              <button id="bscore-clear-btn" class="clear-history-btn" title="Clear all">Clear</button>
+            </div>
+            <ul class="bscore-project-list" id="bscore-project-list">
+              <li class="history-empty">No batch scores yet.</li>
+            </ul>
+          </aside>
+
+          <!-- Main dashboard -->
+          <div class="bscore-main">
+
+            <div id="bscore-placeholder" class="bscore-placeholder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+                stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:1rem">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M3 9h18M9 21V9"/>
+              </svg>
+              <p style="font-weight:600;color:#374151">No batch scores to display yet.</p>
+              <p style="font-size:0.82rem;color:#9ca3af;margin-top:0.4rem">In the <strong>Generate</strong> tab, select <strong>Select All</strong>, generate all patterns, then click <strong>Calculate Batch Metrics</strong>.</p>
+            </div>
+
+            <div id="bscore-dashboard" style="display:none">
+
+              <!-- Title + meta chips -->
+              <div class="bscore-header">
+                <h2 id="bscore-title" class="bscore-title">--</h2>
+                <div class="bscore-meta-row">
+                  <span id="bscore-meta-total" class="bscore-meta-chip">-- total</span>
+                  <span id="bscore-meta-analyzed" class="bscore-meta-chip bscore-chip-green">-- analyzed</span>
+                  <span id="bscore-meta-skipped" class="bscore-meta-chip bscore-chip-gray">-- skipped</span>
+                </div>
+              </div>
+
+              <!-- Aggregate stat cards -->
+              <div class="bscore-stat-row">
+                <div class="bscore-stat-card">
+                  <span class="bscore-stat-val" id="bscore-avg-mi">--</span>
+                  <span class="bscore-stat-label">Avg MI Score</span>
+                </div>
+                <div class="bscore-stat-card">
+                  <span class="bscore-stat-val" id="bscore-avg-ck">--</span>
+                  <span class="bscore-stat-label">Avg CK Score</span>
+                </div>
+                <div class="bscore-stat-card bscore-stat-card-green">
+                  <span class="bscore-stat-val" id="bscore-success-count">--</span>
+                  <span class="bscore-stat-label">Patterns Scored</span>
+                </div>
+                <div class="bscore-stat-card bscore-stat-card-red">
+                  <span class="bscore-stat-val" id="bscore-failed-count">--</span>
+                  <span class="bscore-stat-label">Failed / Skipped</span>
+                </div>
+              </div>
+
+              <!-- Pattern scores table -->
+              <div class="bscore-table-wrap">
+                <table class="bscore-table" id="bscore-table">
+                  <thead>
+                    <tr>
+                      <th data-bscol="pattern">Pattern</th>
+                      <th data-bscol="status">Status</th>
+                      <th data-bscol="mi">Avg MI</th>
+                      <th>MI Range</th>
+                      <th>Distribution</th>
+                      <th data-bscol="ck">CK Score</th>
+                      <th data-bscol="wmc">WMC</th>
+                      <th data-bscol="cbo">CBO</th>
+                      <th data-bscol="rfc">RFC</th>
+                      <th data-bscol="dit">DIT</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bscore-tbody"></tbody>
+                </table>
+              </div>
+
+            </div><!-- /bscore-dashboard -->
+          </div><!-- /bscore-main -->
+        </div><!-- /bscore-layout -->
+      </div><!-- /tab-batch-score -->
 
     </div><!-- /container -->
 

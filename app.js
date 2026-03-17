@@ -14,13 +14,22 @@ document.querySelectorAll('.nav-link').forEach(link => {
     // Widen container for dashboard-style tabs
     if (tab === 'scoring') {
       mainContainer.classList.add('scoring-wide');
-      mainContainer.classList.remove('obf-wide');
+      mainContainer.classList.remove('obf-wide', 'bscore-wide');
     } else if (tab === 'obfuscated') {
       mainContainer.classList.add('obf-wide');
-      mainContainer.classList.remove('scoring-wide');
+      mainContainer.classList.remove('scoring-wide', 'bscore-wide');
       loadObfuscatedData();
-    } else {
+    } else if (tab === 'batch-score') {
+      mainContainer.classList.add('bscore-wide');
       mainContainer.classList.remove('scoring-wide', 'obf-wide');
+      renderBatchScoreProjectList();
+      // Restore last-viewed project if available
+      if (_bsSelectedProjectId) {
+        const entry = getBatchScoreHistory().find(e => e.id === _bsSelectedProjectId);
+        if (entry) renderBatchScoreDashboard(entry.snapshot);
+      }
+    } else {
+      mainContainer.classList.remove('scoring-wide', 'obf-wide', 'bscore-wide');
     }
   });
 });
@@ -41,12 +50,20 @@ const generateResponseBox = document.getElementById('generate-response-box');
 const createFilesBtn = document.getElementById('create-files-btn');
 const startMetricsBtn = document.getElementById('start-metrics-btn');
 const downloadBundleBtn = document.getElementById('download-bundle-btn');
+const batchMetricsBtn = document.getElementById('batch-metrics-btn');
 
 let lastGeneratedFiles = [];
 let lastPattern = '';
 let lastDescription = '';
 let lastBatchJobId = '';
 let lastBatchBundleFilename = 'generated_projects_bundle.zip';
+
+// ── Batch Score state ────────────────────────────────────────────────────
+let _bsSelectedProjectId = null;
+let _bsCurrentPatterns = [];
+let _bsSortCol = 'mi';
+let _bsSortDir = 'desc';
+const BATCH_SCORE_HISTORY_KEY = 'dp_batch_score_history';
 const chatInput = document.getElementById('chat-input');
 const chatSendBtn = document.getElementById('chat-send-btn');
 const chatForm = document.getElementById('chat-form');
@@ -327,6 +344,7 @@ generateForm.addEventListener('submit', async (e) => {
       lastBatchBundleFilename = extractBundleFilename(finalStatus);
       downloadBundleBtn.hidden = false;
       downloadBundleBtn.textContent = `Download ${lastBatchBundleFilename}`;
+      batchMetricsBtn.hidden = false;
 
       generateResponseBox.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:0.55rem;">
@@ -891,6 +909,182 @@ chatForm.addEventListener('submit', async (e) => {
   }
 });
 
+// ── Project Batch Score ────────────────────────────────────────────────────
+
+async function fetchBatchMetrics(jobId) {
+  const encodedJobId = encodeURIComponent(jobId);
+  const response = await fetch(`${API_BASE_URL}/api/v1/generate-pass-projects/${encodedJobId}/analyze-metrics`);
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    throw makeServerError(response.status, response.statusText, errBody);
+  }
+  return response.json();
+}
+
+function getBatchScoreHistory() {
+  try { return JSON.parse(localStorage.getItem(BATCH_SCORE_HISTORY_KEY) ?? '[]'); }
+  catch { return []; }
+}
+
+function saveBatchScore(entry) {
+  const history = getBatchScoreHistory();
+  // Avoid duplicates by jobId — replace existing if re-fetched
+  const idx = history.findIndex(h => h.jobId === entry.jobId);
+  if (idx !== -1) history.splice(idx, 1);
+  history.unshift(entry);
+  if (history.length > 20) history.length = 20;
+  localStorage.setItem(BATCH_SCORE_HISTORY_KEY, JSON.stringify(history));
+  renderBatchScoreProjectList();
+}
+
+function renderBatchScoreProjectList() {
+  const list = document.getElementById('bscore-project-list');
+  if (!list) return;
+  const history = getBatchScoreHistory();
+  if (history.length === 0) {
+    list.innerHTML = '<li class="history-empty">No batch scores yet.</li>';
+    return;
+  }
+  list.innerHTML = history.map(entry => `
+    <li class="bscore-project-item${entry.id === _bsSelectedProjectId ? ' selected' : ''}" data-id="${entry.id}">
+      <span class="bscore-project-name" title="${escapeHtml(entry.projectContext)}">${escapeHtml(entry.projectContext)}</span>
+      <span class="bscore-project-meta">${escapeHtml(entry.date)} · ${entry.analyzedPatterns ?? '--'}/${entry.totalPatterns ?? '--'} patterns</span>
+    </li>
+  `).join('');
+
+  list.querySelectorAll('.bscore-project-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const id = Number(item.dataset.id);
+      const entry = getBatchScoreHistory().find(e => e.id === id);
+      if (!entry) return;
+      _bsSelectedProjectId = id;
+      renderBatchScoreProjectList();
+      renderBatchScoreDashboard(entry.snapshot);
+    });
+  });
+}
+
+function renderBatchScoreDashboard(data) {
+  document.getElementById('bscore-title').textContent =
+    data.title ?? `Batch Metrics — ${data.project_context ?? ''}`;
+  document.getElementById('bscore-meta-total').textContent    = `${data.total_patterns    ?? 0} total`;
+  document.getElementById('bscore-meta-analyzed').textContent = `${data.analyzed_patterns ?? 0} analyzed`;
+  document.getElementById('bscore-meta-skipped').textContent  = `${data.skipped_patterns  ?? 0} skipped`;
+
+  const successPatterns = (data.patterns ?? []).filter(p => p.status === 'success');
+  const failedCount = (data.patterns ?? []).length - successPatterns.length;
+
+  const avgMI = successPatterns.length > 0
+    ? successPatterns.reduce((s, p) => s + (p.mi?.avg_mi_score ?? 0), 0) / successPatterns.length
+    : null;
+  const avgCK = successPatterns.length > 0
+    ? successPatterns.reduce((s, p) => s + (p.ck?.ck_overall_score ?? 0), 0) / successPatterns.length
+    : null;
+
+  document.getElementById('bscore-avg-mi').textContent       = avgMI != null ? avgMI.toFixed(1) : '--';
+  document.getElementById('bscore-avg-ck').textContent       = avgCK != null ? avgCK.toFixed(1) : '--';
+  document.getElementById('bscore-success-count').textContent = successPatterns.length;
+  document.getElementById('bscore-failed-count').textContent  = failedCount;
+
+  _bsCurrentPatterns = data.patterns ?? [];
+  renderBatchScoreTable();
+
+  document.getElementById('bscore-placeholder').style.display = 'none';
+  document.getElementById('bscore-dashboard').style.display   = '';
+}
+
+function renderBatchScoreTable() {
+  const patterns = [..._bsCurrentPatterns];
+
+  patterns.sort((a, b) => {
+    const getVal = p => {
+      switch (_bsSortCol) {
+        case 'pattern': return p.pattern ?? '';
+        case 'status':  return p.status  ?? '';
+        case 'mi':  return p.mi?.avg_mi_score    ?? -1;
+        case 'ck':  return p.ck?.ck_overall_score ?? -1;
+        case 'wmc': return p.ck?.avg_wmc ?? -1;
+        case 'cbo': return p.ck?.avg_cbo ?? -1;
+        case 'rfc': return p.ck?.avg_rfc ?? -1;
+        case 'dit': return p.ck?.avg_dit ?? -1;
+        default: return 0;
+      }
+    };
+    const av = getVal(a), bv = getVal(b);
+    if (typeof av === 'number') return _bsSortDir === 'asc' ? av - bv : bv - av;
+    return _bsSortDir === 'asc'
+      ? String(av).localeCompare(String(bv))
+      : String(bv).localeCompare(String(av));
+  });
+
+  // Update sort indicators on headers
+  document.querySelectorAll('#bscore-table th[data-bscol]').forEach(th => {
+    th.classList.remove('bscore-th-sorted-asc', 'bscore-th-sorted-desc');
+    if (th.dataset.bscol === _bsSortCol) th.classList.add(`bscore-th-sorted-${_bsSortDir}`);
+  });
+
+  const tbody = document.getElementById('bscore-tbody');
+  tbody.innerHTML = patterns.map(p => {
+    const mi = p.mi?.avg_mi_score ?? null;
+    const ck = p.ck?.ck_overall_score ?? null;
+    const isSuccess = p.status === 'success';
+    const dist = p.mi?.mi_distribution;
+
+    return `<tr class="${!isSuccess ? 'bscore-row-failed' : ''}">
+      <td class="bscore-pattern-name">${escapeHtml(p.pattern ?? '—')}</td>
+      <td><span class="bscore-status-badge ${isSuccess ? 'bscore-status-success' : 'bscore-status-failed'}">${escapeHtml(p.status ?? '—')}</span></td>
+      <td>${isSuccess ? miPillHtml(mi) : '—'}</td>
+      <td class="bscore-range">
+        ${isSuccess && p.mi
+          ? `<span class="obf-range-min">${p.mi.min_mi_score?.toFixed(1) ?? '—'}</span><span class="obf-range-sep">–</span><span class="obf-range-max">${p.mi.max_mi_score?.toFixed(1) ?? '—'}</span>`
+          : '—'}
+      </td>
+      <td class="obf-dist-cell">${isSuccess && dist ? distBarHtml(dist) : '—'}</td>
+      <td>${isSuccess ? ckPillHtml(ck) : '—'}</td>
+      <td class="bscore-num">${isSuccess ? (p.ck?.avg_wmc?.toFixed(1) ?? '—') : '—'}</td>
+      <td class="bscore-num">${isSuccess ? (p.ck?.avg_cbo?.toFixed(1) ?? '—') : '—'}</td>
+      <td class="bscore-num">${isSuccess ? (p.ck?.avg_rfc?.toFixed(1) ?? '—') : '—'}</td>
+      <td class="bscore-num">${isSuccess ? (p.ck?.avg_dit?.toFixed(1) ?? '—') : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+batchMetricsBtn.addEventListener('click', async () => {
+  if (!lastBatchJobId) return;
+
+  batchMetricsBtn.disabled = true;
+  batchMetricsBtn.textContent = 'Fetching metrics…';
+
+  try {
+    const data = await fetchBatchMetrics(lastBatchJobId);
+
+    const entry = {
+      id:              Date.now(),
+      jobId:           lastBatchJobId,
+      projectContext:  data.project_context ?? lastDescription,
+      title:           data.title ?? `Batch Metrics — ${data.project_context ?? lastDescription}`,
+      totalPatterns:   data.total_patterns,
+      analyzedPatterns: data.analyzed_patterns,
+      date:            new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      snapshot:        data,
+    };
+
+    _bsSelectedProjectId = entry.id;
+    saveBatchScore(entry);
+    renderBatchScoreDashboard(data);
+    openTab('batch-score');
+  } catch (err) {
+    const isCors = err.message === 'Failed to fetch';
+    const msg = isCors
+      ? 'Failed to fetch — CORS error. Add Access-Control-Allow-Origin: * to your backend.'
+      : `Failed to fetch batch metrics: ${err.message}`;
+    generateResponseBox.innerHTML += `<div style="color:#dc2626;margin-top:0.5rem;font-size:0.82rem;padding:0.4rem 0">${msg}</div>`;
+  } finally {
+    batchMetricsBtn.disabled = false;
+    batchMetricsBtn.textContent = 'Calculate Batch Metrics';
+  }
+});
+
 // ── Minimal Markdown → HTML renderer ──────────────────────────────────────
 function escapeHtml(text) {
   return text
@@ -1204,4 +1398,32 @@ document.querySelectorAll('.obf-table th[data-col]').forEach(th => {
 document.getElementById('obf-search').addEventListener('input', renderObfuscated);
 document.getElementById('obf-sort-col').addEventListener('change', e => { _obfSortCol = e.target.value; renderObfuscated(); });
 document.getElementById('obf-sort-dir').addEventListener('change', e => { _obfSortDir = e.target.value; renderObfuscated(); });
+
+// ── Batch Score — column sort + clear ────────────────────────────────────
+document.querySelectorAll('#bscore-table th[data-bscol]').forEach(th => {
+  th.style.cursor = 'pointer';
+  th.addEventListener('click', () => {
+    if (_bsSortCol === th.dataset.bscol) {
+      _bsSortDir = _bsSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      _bsSortCol = th.dataset.bscol;
+      _bsSortDir = (th.dataset.bscol === 'pattern' || th.dataset.bscol === 'status') ? 'asc' : 'desc';
+    }
+    renderBatchScoreTable();
+  });
+});
+
+document.getElementById('bscore-clear-btn').addEventListener('click', () => {
+  if (confirm('Clear all batch score history?')) {
+    localStorage.removeItem(BATCH_SCORE_HISTORY_KEY);
+    _bsSelectedProjectId = null;
+    _bsCurrentPatterns = [];
+    renderBatchScoreProjectList();
+    document.getElementById('bscore-dashboard').style.display = 'none';
+    document.getElementById('bscore-placeholder').style.display = '';
+  }
+});
+
+// Populate batch score sidebar on page load
+renderBatchScoreProjectList();
 

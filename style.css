@@ -168,7 +168,8 @@ h1 {
 
 #create-files-btn,
 #start-metrics-btn,
-#download-bundle-btn {
+#download-bundle-btn,
+#batch-metrics-btn {
   width: 100%;
   margin-top: 0.75rem;
   padding: 0.65rem;
@@ -184,7 +185,8 @@ h1 {
 
 #create-files-btn:hover,
 #start-metrics-btn:hover,
-#download-bundle-btn:hover {
+#download-bundle-btn:hover,
+#batch-metrics-btn:hover {
   background: #6366f1;
   color: #ffffff;
 }
@@ -1513,3 +1515,309 @@ h1 {
   }
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Project Batch Score Tab
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.container.bscore-wide {
+  max-width: 1420px;
+}
+
+/* Layout */
+.bscore-layout {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Sidebar */
+.bscore-sidebar {
+  width: 230px;
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: calc(64px + 1.5rem);
+  max-height: calc(100vh - 64px - 5rem);
+}
+
+.bscore-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.bscore-sidebar-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.bscore-project-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.bscore-project-item {
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.bscore-project-item:hover {
+  background: #ede9fe;
+}
+
+.bscore-project-item.selected {
+  background: #ede9fe;
+  border-left-color: #6366f1;
+}
+
+.bscore-project-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bscore-project-meta {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  margin-top: 0.15rem;
+  display: block;
+}
+
+/* Main content */
+.bscore-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bscore-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6b7280;
+}
+
+/* Header */
+.bscore-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.bscore-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.bscore-meta-row {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.bscore-meta-chip {
+  font-size: 0.74rem;
+  font-weight: 500;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.bscore-chip-green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.bscore-chip-gray {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Aggregate stat cards */
+.bscore-stat-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.bscore-stat-card {
+  flex: 1;
+  min-width: 130px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.bscore-stat-card-green {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.bscore-stat-card-red {
+  background: #fff7f7;
+  border-color: #fecaca;
+}
+
+.bscore-stat-val {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+}
+
+.bscore-stat-label {
+  font-size: 0.74rem;
+  color: #6b7280;
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
+/* Pattern scores table */
+.bscore-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.bscore-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.bscore-table th {
+  background: #f9fafb;
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bscore-table th:hover {
+  background: #f3f4f6;
+}
+
+.bscore-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.bscore-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.bscore-table tbody tr:hover td {
+  background: #f9fafb;
+}
+
+.bscore-row-failed td {
+  opacity: 0.5;
+}
+
+.bscore-pattern-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bscore-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.bscore-range {
+  font-size: 0.78rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.bscore-status-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.bscore-status-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.bscore-status-failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.bscore-table th.bscore-th-sorted-asc::after  { content: ' ↑'; color: #6366f1; }
+.bscore-table th.bscore-th-sorted-desc::after { content: ' ↓'; color: #6366f1; }
+
+/* Batch Metrics button (green accent) */
+#batch-metrics-btn {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  border-color: #059669;
+  color: #ffffff;
+}
+
+#batch-metrics-btn:hover {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  color: #ffffff;
+}
+
+@media (max-width: 900px) {
+  .bscore-layout {
+    flex-direction: column;
+  }
+
+  .bscore-sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+
+  .bscore-stat-row {
+    gap: 0.6rem;
+  }
+}
