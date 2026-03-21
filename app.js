@@ -14,22 +14,26 @@ document.querySelectorAll('.nav-link').forEach(link => {
     // Widen container for dashboard-style tabs
     if (tab === 'scoring') {
       mainContainer.classList.add('scoring-wide');
-      mainContainer.classList.remove('obf-wide', 'bscore-wide');
+      mainContainer.classList.remove('obf-wide', 'bscore-wide', 'model-wide');
     } else if (tab === 'obfuscated') {
       mainContainer.classList.add('obf-wide');
-      mainContainer.classList.remove('scoring-wide', 'bscore-wide');
+      mainContainer.classList.remove('scoring-wide', 'bscore-wide', 'model-wide');
       loadObfuscatedData();
     } else if (tab === 'batch-score') {
       mainContainer.classList.add('bscore-wide');
-      mainContainer.classList.remove('scoring-wide', 'obf-wide');
+      mainContainer.classList.remove('scoring-wide', 'obf-wide', 'model-wide');
       renderBatchScoreProjectList();
       // Restore last-viewed project if available
       if (_bsSelectedProjectId) {
         const entry = getBatchScoreHistory().find(e => e.id === _bsSelectedProjectId);
         if (entry) renderBatchScoreDashboard(entry.snapshot);
       }
-    } else {
+    } else if (tab === 'model-comparison') {
+      mainContainer.classList.add('model-wide');
       mainContainer.classList.remove('scoring-wide', 'obf-wide', 'bscore-wide');
+      renderModelComparison();
+    } else {
+      mainContainer.classList.remove('scoring-wide', 'obf-wide', 'bscore-wide', 'model-wide');
     }
   });
 });
@@ -1641,6 +1645,181 @@ document.querySelectorAll('.obf-table th[data-col]').forEach(th => {
 document.getElementById('obf-search').addEventListener('input', renderObfuscated);
 document.getElementById('obf-sort-col').addEventListener('change', e => { _obfSortCol = e.target.value; renderObfuscated(); });
 document.getElementById('obf-sort-dir').addEventListener('change', e => { _obfSortDir = e.target.value; renderObfuscated(); });
+
+// ── Model Comparison ───────────────────────────────────────────────────────
+const MODEL_COMPARISON_DATA = [
+  {
+    model: 'GPT-5.3-Codex',
+    patterns_detected: 81,
+    total_patterns: 83,
+    precision: 96.2,
+    recall: 97.6,
+    f1_score: 96.9,
+    false_positives: 2,
+    avg_latency_ms: 1210,
+    per_pattern: {
+      'factory-method': 98.0,
+      strategy: 99.0,
+      composite: 97.0,
+      observer: 96.0,
+      singleton: 100.0,
+    },
+  },
+  {
+    model: 'Qwen3-Coder-30B',
+    patterns_detected: 77,
+    total_patterns: 83,
+    precision: 92.8,
+    recall: 93.4,
+    f1_score: 93.1,
+    false_positives: 4,
+    avg_latency_ms: 1460,
+    per_pattern: {
+      'factory-method': 95.0,
+      strategy: 96.0,
+      composite: 94.0,
+      observer: 90.0,
+      singleton: 97.0,
+    },
+  },
+  {
+    model: 'DeepSeek-Coder-V2',
+    patterns_detected: 74,
+    total_patterns: 83,
+    precision: 90.4,
+    recall: 91.1,
+    f1_score: 90.7,
+    false_positives: 6,
+    avg_latency_ms: 1320,
+    per_pattern: {
+      'factory-method': 93.0,
+      strategy: 92.0,
+      composite: 91.0,
+      observer: 88.0,
+      singleton: 94.0,
+    },
+  },
+  {
+    model: 'Llama-3.1-70B',
+    patterns_detected: 70,
+    total_patterns: 83,
+    precision: 87.3,
+    recall: 89.0,
+    f1_score: 88.1,
+    false_positives: 7,
+    avg_latency_ms: 1575,
+    per_pattern: {
+      'factory-method': 89.0,
+      strategy: 91.0,
+      composite: 88.0,
+      observer: 84.0,
+      singleton: 93.0,
+    },
+  },
+];
+
+let _mcSortCol = 'patterns_detected';
+let _mcSortDir = 'desc';
+
+function modelMetricPill(score) {
+  const cls = score >= 95 ? 'good' : score >= 90 ? 'moderate' : score >= 85 ? 'low' : 'poor';
+  return `<span class="score-pill ${cls}">${score.toFixed(1)}%</span>`;
+}
+
+function modelMatrixCell(value) {
+  const cls = value >= 95 ? 'good' : value >= 90 ? 'moderate' : value >= 85 ? 'low' : 'poor';
+  return `<span class="score-pill ${cls}">${value.toFixed(1)}%</span>`;
+}
+
+function renderModelComparison() {
+  const rows = [...MODEL_COMPARISON_DATA];
+
+  rows.sort((a, b) => {
+    const av = a[_mcSortCol];
+    const bv = b[_mcSortCol];
+    if (typeof av === 'number' && typeof bv === 'number') {
+      return _mcSortDir === 'asc' ? av - bv : bv - av;
+    }
+    return _mcSortDir === 'asc'
+      ? String(av).localeCompare(String(bv))
+      : String(bv).localeCompare(String(av));
+  });
+
+  const bestByF1 = [...MODEL_COMPARISON_DATA].sort((a, b) => b.f1_score - a.f1_score)[0];
+  const bestRecall = [...MODEL_COMPARISON_DATA].sort((a, b) => b.recall - a.recall)[0];
+
+  document.getElementById('mc-total-models').textContent = String(MODEL_COMPARISON_DATA.length);
+  document.getElementById('mc-best-model').textContent = bestByF1?.model ?? '--';
+  document.getElementById('mc-best-f1').textContent = bestByF1 ? `${bestByF1.f1_score.toFixed(1)}%` : '--';
+  document.getElementById('mc-best-recall').textContent = bestRecall ? `${bestRecall.recall.toFixed(1)}%` : '--';
+
+  const tbody = document.getElementById('mc-tbody');
+  tbody.innerHTML = rows.map(row => {
+    return `<tr>
+      <td class="mc-model-name">${escapeHtml(row.model)}</td>
+      <td class="mc-num">${row.patterns_detected}/${row.total_patterns}</td>
+      <td>${modelMetricPill(row.precision)}</td>
+      <td>${modelMetricPill(row.recall)}</td>
+      <td>${modelMetricPill(row.f1_score)}</td>
+      <td class="mc-num">${row.false_positives}</td>
+      <td class="mc-num">${row.avg_latency_ms}</td>
+    </tr>`;
+  }).join('');
+
+  const patterns = Object.keys(MODEL_COMPARISON_DATA[0]?.per_pattern ?? {});
+  const matrixHead = document.getElementById('mc-matrix-thead');
+  matrixHead.innerHTML = `
+    <tr>
+      <th>Pattern</th>
+      ${MODEL_COMPARISON_DATA.map(row => `<th>${escapeHtml(row.model)}</th>`).join('')}
+    </tr>
+  `;
+
+  const matrixBody = document.getElementById('mc-matrix-tbody');
+  matrixBody.innerHTML = patterns.map(pattern => {
+    return `<tr>
+      <td class="mc-pattern-name">${escapeHtml(formatPatternLabel(pattern))}</td>
+      ${MODEL_COMPARISON_DATA.map(row => {
+        const score = Number(row.per_pattern?.[pattern] ?? 0);
+        return `<td>${modelMatrixCell(score)}</td>`;
+      }).join('')}
+    </tr>`;
+  }).join('');
+
+  document.querySelectorAll('#mc-table th[data-mccol]').forEach(th => {
+    th.classList.remove('mc-th-sorted-asc', 'mc-th-sorted-desc');
+    if (th.dataset.mccol === _mcSortCol) th.classList.add(`mc-th-sorted-${_mcSortDir}`);
+  });
+
+  const sortColEl = document.getElementById('mc-sort-col');
+  const sortDirEl = document.getElementById('mc-sort-dir');
+  if (sortColEl) sortColEl.value = _mcSortCol;
+  if (sortDirEl) sortDirEl.value = _mcSortDir;
+}
+
+document.querySelectorAll('#mc-table th[data-mccol]').forEach(th => {
+  th.style.cursor = 'pointer';
+  th.addEventListener('click', () => {
+    if (_mcSortCol === th.dataset.mccol) {
+      _mcSortDir = _mcSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      _mcSortCol = th.dataset.mccol;
+      _mcSortDir = _mcSortCol === 'model' ? 'asc' : 'desc';
+    }
+    renderModelComparison();
+  });
+});
+
+document.getElementById('mc-sort-col')?.addEventListener('change', (e) => {
+  _mcSortCol = e.target.value;
+  _mcSortDir = _mcSortCol === 'model' ? 'asc' : _mcSortDir;
+  renderModelComparison();
+});
+
+document.getElementById('mc-sort-dir')?.addEventListener('change', (e) => {
+  _mcSortDir = e.target.value;
+  renderModelComparison();
+});
 
 // ── Batch Score — column sort + clear ────────────────────────────────────
 document.querySelectorAll('#bscore-table th[data-bscol]').forEach(th => {

@@ -1573,6 +1573,129 @@ h1 {
   max-width: 1420px;
 }
 
+.container.model-wide {
+  max-width: 1220px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Model Comparison Tab
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.mc-stat-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.mc-stat-card {
+  flex: 1;
+  min-width: 170px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.mc-stat-card-green {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.mc-stat-val {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.mc-stat-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mc-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.mc-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.mc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  white-space: nowrap;
+}
+
+.mc-table th {
+  background: #f9fafb;
+  padding: 0.62rem 0.82rem;
+  text-align: left;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e5e7eb;
+  user-select: none;
+}
+
+.mc-table td {
+  padding: 0.56rem 0.82rem;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.mc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.mc-table tr:hover td {
+  background: #f9fafb;
+}
+
+.mc-model-name,
+.mc-pattern-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.mc-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-th-sorted-asc::after {
+  content: ' \2191';
+  color: #6366f1;
+}
+
+.mc-th-sorted-desc::after {
+  content: ' \2193';
+  color: #6366f1;
+}
+
+@media (max-width: 900px) {
+  .mc-stat-card {
+    min-width: 140px;
+  }
+
+  .mc-controls {
+    justify-content: flex-start;
+  }
+}
+
 /* Layout */
 .bscore-layout {
   display: flex;
