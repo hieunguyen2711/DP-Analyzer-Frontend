@@ -253,13 +253,21 @@ h1 {
   margin-top: 0.25rem;
 }
 
-#file-name.has-file {
+#file-name.has-file,
+#piqs-file-name.has-file {
   color: #6366f1;
   font-weight: 500;
 }
 
+#piqs-file-name {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
 /* --- Submit Button --- */
-#submit-btn {
+#submit-btn,
+#piqs-submit-btn {
   width: 100%;
   padding: 0.75rem;
   background: #6366f1;
@@ -272,13 +280,54 @@ h1 {
   transition: background 0.2s, opacity 0.2s;
 }
 
-#submit-btn:hover:not(:disabled) {
+#submit-btn:hover:not(:disabled),
+#piqs-submit-btn:hover:not(:disabled) {
   background: #4f46e5;
 }
 
-#submit-btn:disabled {
+#submit-btn:disabled,
+#piqs-submit-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* --- PIQS Result --- */
+#piqs-response-box {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1.25rem;
+  min-height: 130px;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #374151;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 640px;
+}
+
+.piqs-summary-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+
+.piqs-summary-row .stat-chip {
+  min-width: 130px;
+}
+
+.piqs-calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .piqs-calc-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* --- Chat Section --- */

@@ -67,6 +67,13 @@ const BATCH_SCORE_HISTORY_KEY = 'dp_batch_score_history';
 const chatInput = document.getElementById('chat-input');
 const chatSendBtn = document.getElementById('chat-send-btn');
 const chatForm = document.getElementById('chat-form');
+const piqsForm = document.getElementById('piqs-form');
+const piqsPatternSelect = document.getElementById('piqs-pattern-select');
+const piqsFileInput = document.getElementById('piqs-file-input');
+const piqsDropZone = document.getElementById('piqs-drop-zone');
+const piqsFileName = document.getElementById('piqs-file-name');
+const piqsSubmitBtn = document.getElementById('piqs-submit-btn');
+const piqsResponseBox = document.getElementById('piqs-response-box');
 
 let lastAnalysis = '';
 
@@ -501,6 +508,242 @@ startMetricsBtn.addEventListener('click', async () => {
   } finally {
     startMetricsBtn.disabled = false;
     startMetricsBtn.textContent = 'Start Calculating Metric';
+  }
+});
+
+// ── PIQS Tab ───────────────────────────────────────────────────────────────
+function getValidPiqsFiles(fileList) {
+  const files = Array.from(fileList ?? []);
+  return files.filter(file => file.name.toLowerCase().endsWith('.java'));
+}
+
+function updatePiqsSubmitState() {
+  const hasPattern = Boolean(piqsPatternSelect?.value);
+  const validFiles = getValidPiqsFiles(piqsFileInput?.files);
+  piqsSubmitBtn.disabled = !(hasPattern && validFiles.length > 0);
+}
+
+function setPiqsFileSelection(fileList) {
+  const files = Array.from(fileList ?? []);
+  if (files.length === 0) {
+    piqsFileName.textContent = 'No files selected';
+    piqsFileName.classList.remove('has-file');
+    updatePiqsSubmitState();
+    return;
+  }
+
+  const invalidFiles = files.filter(file => !file.name.toLowerCase().endsWith('.java'));
+  if (invalidFiles.length > 0) {
+    piqsFileName.textContent = 'Only .java files are allowed';
+    piqsFileName.classList.remove('has-file');
+    piqsSubmitBtn.disabled = true;
+    return;
+  }
+
+  const label = files.length === 1
+    ? files[0].name
+    : `${files.length} files selected`;
+
+  piqsFileName.textContent = label;
+  piqsFileName.classList.add('has-file');
+  updatePiqsSubmitState();
+}
+
+function normalizePercent(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function gradeFromScore(score) {
+  if (score == null) return 'Unknown';
+  if (score > 90) return 'Excellent';
+  if (score >= 70) return 'Good';
+  if (score >= 50) return 'Moderate';
+  return 'Poor';
+}
+
+function gradeClass(grade) {
+  const normalized = String(grade ?? '').toLowerCase();
+  if (normalized === 'excellent') return 'good';
+  if (normalized === 'good') return 'moderate';
+  if (normalized === 'moderate') return 'low';
+  return 'poor';
+}
+
+function formatPercent(value) {
+  const num = normalizePercent(value);
+  return num == null ? '—' : `${num.toFixed(2)}%`;
+}
+
+function renderPiqsResult(data) {
+  const patternName = data?.pattern_name ?? '—';
+  const filesAnalyzed = data?.files_analyzed ?? 0;
+  const logicalAssessment = Array.isArray(data?.logical_assessment)
+    ? data.logical_assessment
+    : [];
+
+  const psr = data?.breadth_calculation_psr ?? {};
+  const cpc = data?.depth_calculation_cpc ?? {};
+  const final = data?.final_quality_result_piqs ?? {};
+
+  const finalPercent = normalizePercent(final?.result_percent);
+  const finalGrade = final?.grade ?? gradeFromScore(finalPercent);
+
+  const logicalRows = logicalAssessment.length > 0
+    ? logicalAssessment.map(item => `
+      <tr>
+        <td>${escapeHtml(String(item?.property_id ?? '—'))}</td>
+        <td>${item?.weight ?? '—'}</td>
+        <td>${item?.satisfaction ?? '—'}</td>
+        <td>${escapeHtml(String(item?.justification ?? ''))}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="4" style="text-align:center;color:#9ca3af">No logical assessment returned.</td></tr>';
+
+  piqsResponseBox.innerHTML = `
+    <div class="piqs-summary-row">
+      <div class="stat-chip stat-chip-pattern">
+        <span class="stat-value">${escapeHtml(String(patternName))}</span>
+        <span class="stat-label">Pattern</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-value">${filesAnalyzed}</span>
+        <span class="stat-label">Files Analyzed</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-value">${formatPercent(finalPercent)}</span>
+        <span class="stat-label">PIQS</span>
+      </div>
+      <div class="stat-chip">
+        <span class="score-pill ${gradeClass(finalGrade)}">${escapeHtml(String(finalGrade))}</span>
+        <span class="stat-label">Grade</span>
+      </div>
+    </div>
+
+    <div class="piqs-calc-grid">
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-title">Breadth Calculation (PSR)</span>
+          <span class="metric-badge piqs">PSR</span>
+        </div>
+        <div class="metric-score-row">
+          <span class="metric-score">${formatPercent(psr?.result_percent)}</span>
+        </div>
+        <p class="metric-description"><strong>Formula:</strong> ${escapeHtml(String(psr?.formula ?? '—'))}</p>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-title">Depth Calculation (CPC)</span>
+          <span class="metric-badge piqs">CPC</span>
+        </div>
+        <div class="metric-score-row">
+          <span class="metric-score">${formatPercent(cpc?.result_percent)}</span>
+        </div>
+        <p class="metric-description"><strong>Formula:</strong> ${escapeHtml(String(cpc?.formula ?? '—'))}</p>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-card-header">
+        <span class="metric-title">Final Quality Result (PIQS)</span>
+        <span class="metric-badge piqs">PIQS</span>
+      </div>
+      <div class="metric-score-row">
+        <span class="metric-score">${formatPercent(finalPercent)}</span>
+      </div>
+      <p class="metric-description"><strong>Formula:</strong> ${escapeHtml(String(final?.formula ?? 'PIQS = (PSR × 0.6) + (CPC × 0.4)'))}</p>
+    </div>
+
+    <div class="breakdown-section">
+      <h2>Logical Assessment</h2>
+      <div class="breakdown-table-wrap">
+        <table class="breakdown-table">
+          <thead>
+            <tr>
+              <th>Property ID</th>
+              <th>Weight</th>
+              <th>Satisfaction</th>
+              <th>Justification</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${logicalRows}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+piqsPatternSelect?.addEventListener('change', updatePiqsSubmitState);
+
+piqsFileInput?.addEventListener('change', () => {
+  setPiqsFileSelection(piqsFileInput.files);
+});
+
+piqsDropZone?.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  piqsDropZone.classList.add('dragover');
+});
+
+piqsDropZone?.addEventListener('dragleave', () => {
+  piqsDropZone.classList.remove('dragover');
+});
+
+piqsDropZone?.addEventListener('drop', (e) => {
+  e.preventDefault();
+  piqsDropZone.classList.remove('dragover');
+  if (!e.dataTransfer?.files?.length) return;
+  piqsFileInput.files = e.dataTransfer.files;
+  setPiqsFileSelection(piqsFileInput.files);
+});
+
+piqsDropZone?.addEventListener('click', () => piqsFileInput.click());
+piqsDropZone?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    piqsFileInput.click();
+  }
+});
+
+piqsForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const patternName = piqsPatternSelect.value;
+  const javaFiles = getValidPiqsFiles(piqsFileInput.files);
+  if (!patternName || javaFiles.length === 0) return;
+
+  piqsSubmitBtn.disabled = true;
+  piqsSubmitBtn.textContent = 'Analyzing…';
+  piqsResponseBox.innerHTML = '<span style="color:#6366f1;font-style:italic;">Running PIQS analysis…</span>';
+
+  try {
+    const formData = new FormData();
+    formData.append('pattern_name', patternName);
+    javaFiles.forEach(file => formData.append('files', file, file.name));
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/analyze-piqs`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw makeServerError(response.status, response.statusText, errBody);
+    }
+
+    const data = await response.json();
+    renderPiqsResult(data);
+  } catch (err) {
+    const isCors = err.message === 'Failed to fetch';
+    const msg = isCors
+      ? 'Failed to fetch — CORS error. Add Access-Control-Allow-Origin: * to your backend.'
+      : `Error: ${err.message}`;
+    piqsResponseBox.innerHTML = `<span style="color:#dc2626;">${escapeHtml(msg)}</span>`;
+  } finally {
+    piqsSubmitBtn.textContent = 'Analyze PIQS';
+    updatePiqsSubmitState();
   }
 });
 

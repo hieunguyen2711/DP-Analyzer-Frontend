@@ -13,6 +13,8 @@
         <li><a href="#" class="nav-link active" data-tab="generate">Generate</a></li>
         <li><a href="#" class="nav-link" data-tab="analyze">Analyze Single</a></li>
         <li><a href="#" class="nav-link" data-tab="scoring">Scoring Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-tab="piqs">PIQS Score</a></li>
+        <li><a href="#" class="nav-link" data-tab="model-comparison">Model Comparison</a></li>
         <li><a href="#" class="nav-link" data-tab="obfuscated">Obfuscated Metrics</a></li>
         <li><a href="#" class="nav-link" data-tab="batch-score">Project Batch Score</a></li>
       </ul>
@@ -387,6 +389,119 @@
           </aside>
 
         </div><!-- /scoring-layout -->
+      </div>
+
+      <!-- PIQS Tab -->
+      <div id="tab-piqs" class="tab-panel hidden">
+        <h1>PIQS Pattern Quality Score</h1>
+        <p class="subtitle">Upload one or more <code>.java</code> files and evaluate pattern implementation quality.</p>
+
+        <form id="piqs-form">
+          <div class="field-group">
+            <label class="field-label" for="piqs-pattern-select">Pattern Name</label>
+            <select id="piqs-pattern-select" class="pattern-select" required>
+              <option value="" disabled selected>Select a supported pattern...</option>
+              <option value="factory-method">factory-method</option>
+              <option value="strategy">strategy</option>
+              <option value="composite">composite</option>
+              <option value="observer">observer</option>
+              <option value="singleton">singleton</option>
+            </select>
+          </div>
+
+          <div class="drop-zone" id="piqs-drop-zone" role="button" tabindex="0" aria-label="Upload Java files">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p>Drag &amp; drop one or more <strong>.java</strong> files, or</p>
+            <label class="file-label" for="piqs-file-input">Browse files</label>
+            <input type="file" id="piqs-file-input" accept=".java" multiple hidden />
+            <span id="piqs-file-name">No files selected</span>
+          </div>
+
+          <button type="submit" id="piqs-submit-btn" disabled>Analyze PIQS</button>
+        </form>
+
+        <div class="response-section">
+          <h2>PIQS Result</h2>
+          <div id="piqs-response-box">
+            <span class="placeholder">PIQS response will appear here after analysis.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model Comparison Tab -->
+      <div id="tab-model-comparison" class="tab-panel hidden">
+        <h1>Model Comparison</h1>
+        <p class="subtitle">Compare models by their ability to detect design patterns across benchmark projects.</p>
+
+        <div class="mc-stat-row">
+          <div class="mc-stat-card">
+            <span class="mc-stat-val" id="mc-total-models">--</span>
+            <span class="mc-stat-label">Models Evaluated</span>
+          </div>
+          <div class="mc-stat-card mc-stat-card-green">
+            <span class="mc-stat-val" id="mc-best-model">--</span>
+            <span class="mc-stat-label">Top Model (F1)</span>
+          </div>
+          <div class="mc-stat-card">
+            <span class="mc-stat-val" id="mc-best-f1">--</span>
+            <span class="mc-stat-label">Best F1 Score</span>
+          </div>
+          <div class="mc-stat-card">
+            <span class="mc-stat-val" id="mc-best-recall">--</span>
+            <span class="mc-stat-label">Best Recall</span>
+          </div>
+        </div>
+
+        <div class="mc-controls">
+          <div class="obf-sort-group">
+            <label class="obf-sort-label" for="mc-sort-col">Sort</label>
+            <select id="mc-sort-col" class="obf-select">
+              <option value="model">Model</option>
+              <option value="patterns_detected" selected>Patterns Detected</option>
+              <option value="precision">Precision</option>
+              <option value="recall">Recall</option>
+              <option value="f1_score">F1 Score</option>
+              <option value="false_positives">False Positives</option>
+              <option value="avg_latency_ms">Latency</option>
+            </select>
+            <select id="mc-sort-dir" class="obf-select">
+              <option value="asc">Asc</option>
+              <option value="desc" selected>Desc</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mc-table-wrap">
+          <table class="mc-table" id="mc-table">
+            <thead>
+              <tr>
+                <th data-mccol="model">Model</th>
+                <th data-mccol="patterns_detected">Patterns Detected</th>
+                <th data-mccol="precision">Precision</th>
+                <th data-mccol="recall">Recall</th>
+                <th data-mccol="f1_score">F1 Score</th>
+                <th data-mccol="false_positives">False Positives</th>
+                <th data-mccol="avg_latency_ms">Avg Latency (ms)</th>
+              </tr>
+            </thead>
+            <tbody id="mc-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="breakdown-section">
+          <h2>Per-Pattern Detection Rate</h2>
+          <div class="mc-table-wrap">
+            <table class="mc-table" id="mc-matrix-table">
+              <thead id="mc-matrix-thead"></thead>
+              <tbody id="mc-matrix-tbody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- Obfuscated Metrics Tab -->
